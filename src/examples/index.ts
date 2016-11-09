@@ -3,10 +3,13 @@ import createWidget from '../createWidget';
 import createPanel from '../createPanel';
 import createTabbedPanel from '../createTabbedPanel';
 import createButton from '../createButton';
+import createWidgetBase from './../bases/createWidgetBase';
 import { Child, RegistryProvider } from '../mixins/interfaces';
+import d from '../util/d';
 import { createProjector } from '../projector';
 import Promise from 'dojo-shim/Promise';
 import { ComposeFactory } from 'dojo-compose/compose';
+import createWidgetBaseTabPanel from './createWidgetBaseTabPanel';
 
 /**
  * A memory store which handles the widget states
@@ -21,7 +24,14 @@ const widgetStore = createMemoryStore({
 		{ id: 'panel-3', label: 'qat' },
 		{ id: 'baz', label: 'Odio vel inhibeo nostrud. Ad duis blandit facilisi hos multo nobis quibus zelus bene. Ideo veniam eum iriure ymo.' },
 		{ id: 'panel-4', label: 'baz', closeable: true },
-		{ id: 'qat', label: 'Sit pertineo at facilisis quidne qui et amet duis. Patria meus proprius immitto ne appellatio cogo jus. Cui genitus sudo. Suscipit abdo dignissim huic accumsan importunus inhibeo luptatum ut neque augue sagaciter. Iaceo odio exerci natu nonummy vel iaceo odio erat.' }
+		{ id: 'qat', label: 'Sit pertineo at facilisis quidne qui et amet duis. Patria meus proprius immitto ne appellatio cogo jus. Cui genitus sudo. Suscipit abdo dignissim huic accumsan importunus inhibeo luptatum ut neque augue sagaciter. Iaceo odio exerci natu nonummy vel iaceo odio erat.' },
+		{ id: 'widget-base-tab-panel', tabs: [
+			{ label: 'tab 1', active: true },
+			{ label: 'tab 2', closeable: true },
+			{ label: 'tab 3' },
+			{ label: 'tab 4' }
+		]},
+		{ id: 'd-example', visible: true }
 	]
 });
 
@@ -135,6 +145,73 @@ panel4.append(createWidget({
 const tabProjector = createProjector({ root: document.body });
 tabProjector.append(tabWidgets);
 tabProjector.attach();
+
+const widgetBaseTabbedPanelHeader = createWidget({
+	state: {
+		label: 'Widget Base Tabbed Panel'
+	},
+	tagName: 'h1'
+});
+
+const widgetBaseTabbedPanel = createWidgetBaseTabPanel({
+	id: 'widget-base-tab-panel',
+	stateFrom: widgetStore
+});
+
+const widgetBasetabProjector = createProjector({ root: document.body });
+widgetBasetabProjector.append([ widgetBaseTabbedPanelHeader, widgetBaseTabbedPanel ]);
+widgetBasetabProjector.attach();
+
+const basicDHeader = createWidget({
+	state: {
+		label: 'Basic `d` functionality Example'
+	},
+	tagName: 'h1'
+});
+
+const createBasicDWidget = createWidgetBase.extend({
+	childNodeRenderers: [
+		function(this: any): any[] {
+			return [
+				this.state.active ? d('div.active', { innerHTML: 'I must be active!' }) : null,
+				d('div', { }, [
+					d(createWidgetBase.extend({
+						nodeAttributes: [
+							function (this: any): any {
+								return { innerHTML: this.state.label };
+							}
+						]
+					}),
+					{ id: 'example-child', state: { label: 'I am a nested widget!' } })
+				])
+			];
+		}
+	]
+});
+
+const basicDWidget = createBasicDWidget({
+	id: 'd-example',
+	stateFrom: widgetStore
+});
+
+const toggleActiveButton = createButton({
+	state: {
+		label: 'Toggle Active'
+	},
+	listeners: {
+		click: {
+			do() {
+				return widgetStore.get('d-example').then((item: any) => {
+					return widgetStore.patch(Object.assign({}, item, { active: !item.active }));
+				});
+			}
+		}
+	}
+});
+
+const basicDProjector = createProjector({ root: document.body });
+basicDProjector.append([ basicDHeader, basicDWidget, toggleActiveButton ]);
+basicDProjector.attach();
 
 const buttonWidgets: Child[] = [];
 
