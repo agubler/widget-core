@@ -12,6 +12,7 @@ type WidgetFactory = ComposeFactory<Widget<WidgetState>, WidgetOptions<WidgetSta
 
 interface Tab {
 	id: string;
+	childId: string;
 	label: string;
 	active: boolean;
 	closeable: boolean;
@@ -64,7 +65,7 @@ const createTabPanel: TabPanelFactory = createWidgetBase.extend({
 			}));
 
 			const panelNode: DNode = d(`div.${css.panels}`, {}, tabs.map((tab) => {
-				const state = childState.get(tab.id);
+				const state = childState.get(tab.childId);
 				const options: WidgetOptions<WidgetState> = { id: state.id, stateFrom, state };
 
 				return d('dojo-panel', { key: tab, 'data-visible': tab.active ? 'true' : 'false' }, [

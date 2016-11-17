@@ -51,12 +51,19 @@ function isWNode(child: DNode): child is WNode {
 	return child && (<WNode> child).factory !== undefined;
 }
 
+function getChildMapKey(id: string | undefined, state: WidgetState | undefined, factory: any) {
+	if (id) {
+		return state && state.type ? id + '' + state.type : id;
+	}
+	return factory;
+}
+
 function dNodeToVNode(instance: Widget<WidgetState>, dNode: DNode): VNode {
 	const internalState = widgetInternalStateMap.get(instance);
 	let child: HNode | Widget<WidgetState>;
 	if (isWNode(dNode)) {
 		const { factory, options: { id, state } } = dNode;
-		const childrenMapKey = id || factory;
+		const childrenMapKey = getChildMapKey(id, state, factory);
 		const cachedChild = internalState.historicChildrenMap.get(childrenMapKey);
 		if (cachedChild) {
 			child = cachedChild;
@@ -120,7 +127,7 @@ const createWidget: WidgetFactory = createStateful
 				let childrenWrappers: DNode[] = [];
 
 				this.childNodeRenderers.forEach((fn) => {
-					const wrappers = fn.call(this, internalState.widgetFactoryRegistry, internalState.childState);
+					const wrappers = fn.call(this, internalState.widgetFactoryRegistry, internalState.childState, internalState.stateFrom);
 					childrenWrappers = childrenWrappers.concat(wrappers);
 				});
 
@@ -203,7 +210,7 @@ const createWidget: WidgetFactory = createStateful
 
 				if (state.children && internalState.stateFrom) {
 					const promises = state.children.map((child: any) => {
-						const id = child.id || child;
+						const id = child.childId || child;
 						return internalState.stateFrom.get(id);
 					});
 

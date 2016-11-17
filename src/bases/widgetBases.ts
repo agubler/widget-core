@@ -8,14 +8,10 @@
  *
  * The main interfaces that are defined in this module are:
  *   - Widget
- *   - CompositeWidget
- *   - ContainerWidget
  */
 
-import Promise from 'dojo-shim/Promise';
-import Map from 'dojo-shim/Map';
 import IdentityRegistry from 'dojo-core/IdentityRegistry';
-import { Renderable, RenderableParent } from 'dojo-interfaces/abilities';
+import { RenderableParent } from 'dojo-interfaces/abilities';
 import { EventedListener, State, Stateful, StatefulOptions } from 'dojo-interfaces/bases';
 import { EventTargettedObject, Factory, Handle, StylesMap } from 'dojo-interfaces/core';
 import { VNode, VNodeProperties } from 'dojo-interfaces/vdom';
@@ -46,148 +42,6 @@ export interface NodeAttributeFunction {
 	 * @param attributes The current VNodeProperties that will be part of the render
 	 */
 	(this: Widget<WidgetState>, attributes: VNodeProperties): VNodeProperties;
-}
-
-export interface ChildrenChangeEvent<T> {
-	/**
-	 * The subject of the event
-	 */
-	target: T;
-
-	/**
-	 * The type of the event
-	 */
-	type: 'children:changed';
-}
-
-export interface ContainerWidgetMixin<C extends Renderable> {
-	/**
-	 * A map of children *owned* by the widget
-	 */
-	readonly children: Map<string, C>;
-
-	/**
-	 * Remove all the children from the widget, but do not destroy them
-	 */
-	clear(): void;
-
-	/**
-	 * Create a list or map of children and add them to the children owned by this widget
-	 *
-	 * @param children A tuple list of children made up of the factory and the options to pass to the factory or a map of
-	 *                 children to be created
-	 */
-	createChildren<O extends WidgetOptions<WidgetState>>(children: CreateWidgetList<C, O> | CreateWidgetMap<C, O>): Promise<CreateWidgetResults<C>>;
-
-	/**
-	 * Set a child to the end of the children associated with this widget, using the `child.id` as the label for the
-	 * child
-	 *
-	 * @param child The child to set
-	 */
-	set(child: C | C[] | { [label: string]: C }): Handle;
-
-	/**
-	 * Set a child to the end of the children associated with this widget, using the supplied string as the label for
-	 * the child.
-	 *
-	 * @param label The label for the child
-	 * @param child The child to set
-	 */
-	set(label: string, child: C): Handle;
-
-	/**
-	 * Called (if present) when children are rendered to ensure that the children are rendered in the correct order.
-	 *
-	 * If the function returns `-1` then `childA` comes before `childB`, if `0` is returned the order remains unchanged, and
-	 * if `1` is returned `childB` comes before `childA`.
-	 *
-	 * @param childA The first child to compare
-	 * @param childB The second child to compare
-	 */
-	sort?(childA: C, childB: C): 0 | 1 | -1;
-}
-
-/**
- * A set of widget factories and options used to create new widgets
- */
-export type CreateWidgetList<W extends Renderable, O extends WidgetOptions<WidgetState>> = ([Factory<W, O>, O ] | [Factory<W, O>])[];
-
-/**
- * A map of widget factories and options, where the key of the map is used as the label for the created child
- */
-export interface CreateWidgetMap<W extends Renderable, O extends WidgetOptions<WidgetState>> {
-	[label: string]: {
-		factory: Factory<W, O>;
-		options?: O;
-	};
-}
-
-export interface CreateWidgetOptions<C extends Renderable, O extends WidgetOptions<WidgetState>> {
-	/**
-	 * The factory to use in creating the child
-	 */
-	factory: Factory<C, O>;
-
-	/**
-	 * The label to assign the child to, if omitted, the child's `.id` property will be used
-	 */
-	label?: string;
-
-	/**
-	 * Any options to pass to the factory when creating the child
-	 */
-	options?: O;
-}
-
-/**
- * Interface that provides a map of widgets, used when returning from a creation API
- */
-export interface CreateWidgetResults<W extends Renderable> {
-	[label: string]: W;
-}
-
-export interface SubWidgetManager<W extends Renderable> {
-	/**
-	 * Create an instance of a widget based on the a passed factory and add it to the widgets directly managed
-	 * by the composite widget
-	 *
-	 * @param label The label which the widget should be referenced by
-	 * @param factory The factory which will return an instance when called
-	 * @param options Any options to pass to the factory upon construction
-	 */
-	create<V extends W,  O extends WidgetOptions<WidgetState>>(options: CreateWidgetOptions<V, O>): Promise<[string, V]>;
-
-	/**
-	 * Create instances of widgets based on the passed map of widget factories which are passed
-	 *
-	 * @param widgetFactories A map where the key is the label and the value is an object which provides the factory and
-	 *                        any options that should be passed to the constructor
-	 */
-	create<O extends WidgetOptions<WidgetState>>(widgetFactories: CreateWidgetMap<W, O>): Promise<CreateWidgetResults<W>>;
-
-	/**
-	 * Retrieve an instance of a widget which is part of the composite widget
-	 */
-	get<V extends W>(label: string): V | undefined;
-
-	/**
-	 * Returns `true` if the label is currently registered with the composite widget, otherwise returns `false`
-	 */
-	has(label: string): boolean;
-
-	/**
-	 * Adds a sub widget to the widgets directly managed by the composite widget
-	 *
-	 * @param label The label which the widget should be referenced by
-	 * @param widget The instance of the widget to add
-	 */
-	set(label: string, widget: W): Handle;
-
-	/**
-	 * Returns the number of widgets that are being directly managed by the composite widget
-	 */
-	readonly size: number;
 }
 
 export interface HNode {
@@ -361,6 +215,8 @@ export interface WidgetState extends State {
 	 * Children
 	 */
 	children?: any[];
+
+	type?: string;
 }
 
 export interface ContainerWidgetState<T> extends WidgetState {
