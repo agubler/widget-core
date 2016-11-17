@@ -10,6 +10,7 @@ import {
 	WidgetOptions,
 	WidgetRegistry
 } from './widgetBases';
+import createVNodeEvented from './../mixins/createVNodeEvented';
 import { Factory } from 'dojo-interfaces/core';
 import { VNode, VNodeProperties } from 'dojo-interfaces/vdom';
 import { assign } from 'dojo-core/lang';
@@ -62,12 +63,12 @@ function dNodeToVNode(instance: Widget<WidgetState>, dNode: DNode): VNode {
 	const internalState = widgetInternalStateMap.get(instance);
 	let child: HNode | Widget<WidgetState>;
 	if (isWNode(dNode)) {
-		const { factory, options: { id, state } } = dNode;
+		const { factory, options: { id, stateFrom, state } } = dNode;
 		const childrenMapKey = getChildMapKey(id, state, factory);
 		const cachedChild = internalState.historicChildrenMap.get(childrenMapKey);
 		if (cachedChild) {
 			child = cachedChild;
-			if (state) {
+			if (!stateFrom && state) {
 				child.setState(state);
 			}
 		}
@@ -115,6 +116,7 @@ function formatTagNameAndClasses(tagName: string, classes: string[]) {
 }
 
 const createWidget: WidgetFactory = createStateful
+	.mixin(createVNodeEvented)
 	.mixin<WidgetMixin, WidgetOptions<WidgetState>>({
 		mixin: {
 			childNodeRenderers: [],
@@ -209,22 +211,35 @@ const createWidget: WidgetFactory = createStateful
 				const internalState = widgetInternalStateMap.get(instance);
 
 				if (state.children && internalState.stateFrom) {
-					const promises = state.children.map((child: any) => {
-						const id = child.childId || child;
-						return internalState.stateFrom.get(id);
-					});
+					state.children.forEach((item) => {
+						const id = item.childId || item;
+						if (!internalState.childState.has(id)) {
+							const subscription = internalState.stateFrom.observe(id).subscribe(
+								(state: any) => {
+									internalState.childState.set(id, state);
+									instance.invalidate();
+								},
+								(err: any) => {
+									throw err;
+								},
+								() => {
+									subscription.unsubscribe();
+									internalState.childState.delete(id);
+								}
+							);
 
-					Promise.all(promises).then((childStates) => {
-						internalState.childState.clear();
-						childStates.forEach((childState: any) => {
-							internalState.childState.set(childState.id, childState);
-						});
-						instance.invalidate();
+							instance.own({ destroy() {
+								subscription.unsubscribe();
+							}});
+						}
 					});
+					// TODO also need to remove items no longer in children
 				}
-				else {
-					instance.invalidate();
+				else if (internalState.childState.size > 0) {
+					internalState.childState.clear();
 				}
+
+				instance.invalidate();
 			}));
 
 			widgetInternalStateMap.set(instance, {
@@ -237,10 +252,6 @@ const createWidget: WidgetFactory = createStateful
 				historicChildrenMap: new Map<string | Factory<Widget<WidgetState>, WidgetOptions<WidgetState>>, Widget<WidgetState>>(),
 				currentChildrenMap: new Map<string | Factory<Widget<WidgetState>, WidgetOptions<WidgetState>>, Widget<WidgetState>>()
 			});
-
-			instance.own(instance.on('state:changed', () => {
-				instance.invalidate();
-			}));
 		}
 	});
 

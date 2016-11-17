@@ -3,7 +3,7 @@ import createDestroyable from 'dojo-compose/bases/createDestroyable';
 import createEvented from 'dojo-compose/bases/createEvented';
 import { State } from 'dojo-interfaces/bases';
 import { VNodeProperties } from 'dojo-interfaces/vdom';
-import { Widget, WidgetOptions } from 'dojo-interfaces/widgetBases';
+import { Widget, WidgetOptions } from './bases/widgetBases';
 import Map from 'dojo-shim/Map';
 import Promise from 'dojo-shim/Promise';
 import WeakMap from 'dojo-shim/WeakMap';

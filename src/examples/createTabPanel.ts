@@ -10,7 +10,7 @@ import createTab from './createTab';
 
 type WidgetFactory = ComposeFactory<Widget<WidgetState>, WidgetOptions<WidgetState>>;
 
-interface Tab {
+export interface Tab {
 	id: string;
 	childId: string;
 	label: string;
@@ -18,13 +18,13 @@ interface Tab {
 	closeable: boolean;
 }
 
-interface TabPanelState extends ContainerWidgetState<Tab>  { };
+export interface TabPanelState extends ContainerWidgetState<Tab>  { };
 
-interface TabPanelOptions extends WidgetOptions<TabPanelState> { };
+export interface TabPanelOptions extends WidgetOptions<TabPanelState> { };
 
-type TabPanel = Widget<TabPanelState>;
+export type TabPanel = Widget<TabPanelState>;
 
-interface TabPanelFactory extends ComposeFactory<TabPanel, TabPanelOptions> { };
+export interface TabPanelFactory extends ComposeFactory<TabPanel, TabPanelOptions> { };
 
 const createTabPanel: TabPanelFactory = createWidgetBase.extend({
 	tagName: `dojo-panel-tabbed.${tabbedPanelCss.tabs}`,

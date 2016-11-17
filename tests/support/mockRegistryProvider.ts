@@ -1,5 +1,5 @@
 import createWidgetBase from '../../src/bases/createWidgetBase';
-import { Widget, WidgetState } from 'dojo-interfaces/widgetBases';
+import { Widget, WidgetState } from '../../src/bases/widgetBases';
 import Promise from 'dojo-shim/Promise';
 import { Child } from '../../src/mixins/interfaces';
 import { ComposeFactory } from 'dojo-compose/compose';

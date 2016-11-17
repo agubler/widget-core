@@ -2,7 +2,7 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import createWidgetBase from '../../../src/bases/createWidgetBase';
 import { before } from 'dojo-core/aspect';
-import { DNode, HNode, WidgetState, WidgetOptions } from 'dojo-interfaces/widgetBases';
+import { DNode, HNode, WidgetState, WidgetOptions } from '../../../src/bases/widgetBases';
 import { createProjector } from '../../../src/projector';
 import d from '../../../src/util/d';
 import { stub } from 'sinon';
@@ -254,7 +254,7 @@ registerSuite({
 		'not in options or state'() {
 			const widgetBase = createWidgetBase();
 
-			assert.strictEqual(widgetBase.id, 'widget-7');
+			assert.strictEqual(widgetBase.id, 'widget-1');
 		},
 		'is read only'() {
 			const widgetBase = createWidgetBase();
