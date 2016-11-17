@@ -7,22 +7,26 @@ import {
 	Widget,
 	WidgetMixin,
 	WidgetState,
-	WidgetOptions
-} from 'dojo-interfaces/widgetBases';
-import { VNode, VNodeProperties } from 'dojo-interfaces/vdom';
+	WidgetOptions,
+	WidgetRegistry
+} from './widgetBases';
 import { Factory } from 'dojo-interfaces/core';
+import { VNode, VNodeProperties } from 'dojo-interfaces/vdom';
 import { assign } from 'dojo-core/lang';
 import WeakMap from 'dojo-shim/WeakMap';
 import Map from 'dojo-shim/Map';
 import d from './../util/d';
 
-export interface WidgetFactory extends ComposeFactory<Widget<WidgetState>, WidgetOptions<WidgetState>> {}
+export interface WidgetFactory extends ComposeFactory<Widget<WidgetState>, WidgetOptions<WidgetState>> {};
 
 interface WidgetInternalState {
 	readonly id?: string;
 	dirty: boolean;
 	widgetClasses: string[];
 	cachedVNode?: VNode;
+	stateFrom: any;
+	childState: Map<string, WidgetState>;
+	widgetFactoryRegistry: WidgetRegistry<WidgetState>;
 	historicChildrenMap: Map<string | Factory<Widget<WidgetState>, WidgetOptions<WidgetState>>, Widget<WidgetState>>;
 	currentChildrenMap: Map<string | Factory<Widget<WidgetState>, WidgetOptions<WidgetState>>, Widget<WidgetState>>;
 };
@@ -111,10 +115,12 @@ const createWidget: WidgetFactory = createStateful
 			classes: [],
 
 			getChildrenNodes(this: Widget<WidgetState>): DNode[] {
+				const internalState = widgetInternalStateMap.get(this);
+
 				let childrenWrappers: DNode[] = [];
 
 				this.childNodeRenderers.forEach((fn) => {
-					const wrappers = fn.call(this);
+					const wrappers = fn.call(this, internalState.widgetFactoryRegistry, internalState.childState);
 					childrenWrappers = childrenWrappers.concat(wrappers);
 				});
 
@@ -188,12 +194,39 @@ const createWidget: WidgetFactory = createStateful
 		},
 		initialize(instance: Widget<WidgetState>, options: WidgetOptions<WidgetState> = {}) {
 			const { id, tagName } = options;
+			const widgetFactoryRegistry = options.widgetFactoryRegistry || new WidgetRegistry<WidgetState>();
+
 			instance.tagName = tagName || instance.tagName;
+
+			instance.own(instance.on('state:changed', ({ state }) => {
+				const internalState = widgetInternalStateMap.get(instance);
+
+				if (state.children && internalState.stateFrom) {
+					const promises = state.children.map((child: any) => {
+						const id = child.id || child;
+						return internalState.stateFrom.get(id);
+					});
+
+					Promise.all(promises).then((childStates) => {
+						internalState.childState.clear();
+						childStates.forEach((childState: any) => {
+							internalState.childState.set(childState.id, childState);
+						});
+						instance.invalidate();
+					});
+				}
+				else {
+					instance.invalidate();
+				}
+			}));
 
 			widgetInternalStateMap.set(instance, {
 				id,
 				dirty: true,
 				widgetClasses: [],
+				stateFrom: options.stateFrom,
+				childState: new Map<string, WidgetState>(),
+				widgetFactoryRegistry,
 				historicChildrenMap: new Map<string | Factory<Widget<WidgetState>, WidgetOptions<WidgetState>>, Widget<WidgetState>>(),
 				currentChildrenMap: new Map<string | Factory<Widget<WidgetState>, WidgetOptions<WidgetState>>, Widget<WidgetState>>()
 			});
