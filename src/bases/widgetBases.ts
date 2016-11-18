@@ -15,6 +15,7 @@ import { RenderableParent } from 'dojo-interfaces/abilities';
 import { EventedListener, State, Stateful, StatefulOptions } from 'dojo-interfaces/bases';
 import { EventTargettedObject, Factory, Handle, StylesMap } from 'dojo-interfaces/core';
 import { VNode, VNodeProperties } from 'dojo-interfaces/vdom';
+import Map from 'dojo-shim/Map';
 
 /**
  * A function that is called when collecting the children nodes on render, accepting the current list of
@@ -23,9 +24,7 @@ import { VNode, VNodeProperties } from 'dojo-interfaces/vdom';
  * TODO: Should this behave more like a reducer (like above)?
  */
 export interface ChildNodeFunction {
-	(this: Widget<WidgetState>,
-	widgetRegistry: IdentityRegistry<Factory<Widget<WidgetState>,
-	WidgetOptions<WidgetState>>>): DNode[] | VNode[];
+	(this: Widget<WidgetState>, widgetRegistry: WidgetRegistry<WidgetState>, childState?: Map<string, WidgetState>, stateFrom?: any): DNode[] | VNode[];
 }
 
 /**
