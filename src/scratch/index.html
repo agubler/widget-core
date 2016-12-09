@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>dojo-widget Examples</title>
+		<link rel="stylesheet" href="./../../../node_modules/dgrid/css/dgrid.css">
+		<style>
+			body {
+				background-color: rgb(36, 36, 36);
+				color: rgb(181, 181, 181);
+				font-family: Calibri, sans-serif;
+			}
+
+			table {
+				width: 600px;
+			}
+
+			thead {
+				border: 1px solid blue;
+				height: 30px;
+				display: block;
+			}
+
+			tbody {
+				border: 1px solid green;
+				height: 300px;
+				display: block;
+			}
+
+			#main {
+				margin-left: auto;
+				margin-right: auto;
+				width: 910px;
+			}
+
+			.thead-focused, .tbody-focused {
+				border-width: 3px;
+			}
+
+			.dgrid {
+				border-color: rgb(92, 92, 92);
+				width: 900px;
+			}
+
+			.dgrid-header,
+			.dgrid-header-row {
+				background-color: rgb(42, 42, 42);
+				color: rgb(146, 176, 206);
+			}
+
+			.dgrid-cell {
+				border-color: rgb(92, 92, 92);
+			}
+
+			.dgrid-cell:hover {
+				background-color: rgb(52, 45, 35);
+			}
+
+			.dgrid-column-delete {
+				cursor: pointer;
+				font-size: 16pt;
+				text-align: center;
+				width: 50px;
+			}
+
+			.dgrid-column-delete:hover {
+				color: azure;
+			}
+
+			fieldset {
+				margin-top: 15px;
+			}
+
+			.labelText {
+				display: inline-block;
+				min-width: 5em;
+				text-align: right;
+			}
+
+			label > input {
+				padding-left: 8px;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="../../../node_modules/dojo-loader/loader.min.js"></script>
+		<script src="./index.js"></script>
+	</body>
+</html>

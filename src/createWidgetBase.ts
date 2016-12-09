@@ -119,6 +119,10 @@ function dNodeToVNode(instance: Widget<WidgetState>, dNode: DNode): VNode | stri
 		return child.render();
 	}
 
+	if (!dNode.children) {
+		console.log('no children here');
+	}
+
 	dNode.children = dNode.children
 		.filter((child) => child !== null)
 		.map((child: DNode) => {
