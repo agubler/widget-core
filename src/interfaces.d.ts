@@ -142,6 +142,21 @@ export interface WidgetMixin {
 	getNodeAttributes(): VNodeProperties;
 
 	/**
+	 * Properties passed to affect state
+	 */
+	properties: any;
+
+	/**
+	 * Determine changed or new property keys on render.
+	 */
+	diffProperties(this: Widget<WidgetState>, previousProperties: any): string[];
+
+	/**
+	 * Process change in properties
+	 */
+	processPropertiesChange(previousProperties: any, currentProperties: any): void;
+
+	/**
 	 * The ID of the widget, which gets automatically rendered in the VNode property `data-widget-id` when
 	 * rendered.
 	 */
@@ -192,19 +207,9 @@ export interface WidgetMixin {
 
 export interface WidgetOptions<S extends WidgetState> extends StatefulOptions<S>, VNodeEventedOptions {
 	/**
-	 * Any classes that should be added to this instances
+	 * Properties used to affect internal widget state
 	 */
-	classes?: string[];
-
-	/**
-	 * Any node attribute functions that should be added to this instance
-	 */
-	nodeAttributes?: NodeAttributeFunction | NodeAttributeFunction[];
-
-	/**
-	 * Override the tag name for this widget instance
-	 */
-	tagName?: string;
+	properties?: any;
 }
 
 export interface WidgetState extends State {

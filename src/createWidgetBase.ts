@@ -27,6 +27,7 @@ interface WidgetInternalState {
 	cachedVNode?: VNode | string;
 	factoryRegistry: FactoryRegistry;
 	initializedFactoryMap: Map<string, Promise<WidgetFactory>>;
+	previousProperties: any;
 	historicChildrenMap: Map<string | Promise<WidgetFactory> | WidgetFactory, Widget<WidgetState>>;
 	currentChildrenMap: Map<string | Promise<WidgetFactory> | WidgetFactory, Widget<WidgetState>>;
 };
@@ -67,7 +68,7 @@ function dNodeToVNode(instance: Widget<WidgetState>, dNode: DNode): VNode | stri
 	}
 
 	if (isWNode(dNode)) {
-		const { children, options: { id, state } } = dNode;
+		const { children, options: { id, properties } } = dNode;
 
 		let { factory } = dNode;
 		let child: Widget<WidgetState>;
@@ -95,8 +96,8 @@ function dNodeToVNode(instance: Widget<WidgetState>, dNode: DNode): VNode | stri
 
 		if (cachedChild) {
 			child = cachedChild;
-			if (state) {
-				child.setState(state);
+			if (properties) {
+				child.properties = properties;
 			}
 		}
 		else {
@@ -147,10 +148,29 @@ function formatTagNameAndClasses(tagName: string, classes: string[]) {
 	return tagName;
 }
 
+function generateProperties(instance: Widget<WidgetState>, previousProperties: any): any {
+	const changedPropertyKeys = instance.diffProperties(previousProperties);
+	const changedProperties: { currentProperties: any, previousProperties: any } = {
+		currentProperties: {},
+		previousProperties: {}
+	};
+
+	changedPropertyKeys.forEach((key) => {
+		if (instance.properties[key]) {
+			changedProperties.currentProperties[key] = instance.properties[key];
+			changedProperties.previousProperties[key] = previousProperties[key];
+		}
+	});
+
+	return changedProperties;
+}
+
 const createWidget: WidgetFactory = createStateful
 	.mixin(createVNodeEvented)
 	.mixin<WidgetMixin, WidgetOptions<WidgetState>>({
 		mixin: {
+			properties: {},
+
 			classes: [],
 
 			getNode(): DNode {
@@ -203,6 +223,25 @@ const createWidget: WidgetFactory = createStateful
 				return id || (this.state && this.state.id) || generateID(this);
 			},
 
+			processPropertiesChange: function(this: Widget<WidgetState>, props: any): void {
+				this.setState(props);
+			},
+
+			diffProperties(this: Widget<WidgetState>, previousProperties: any): string[] {
+				const changedPropertyKeys: string[] = [];
+				Object.keys(this.properties).forEach((key) => {
+					if (previousProperties[key]) {
+						if (previousProperties[key] !== this.properties[key]) {
+							changedPropertyKeys.push(key);
+						}
+					}
+					else {
+						changedPropertyKeys.push(key);
+					}
+				});
+				return changedPropertyKeys;
+			},
+
 			nodeAttributes: [
 				function (this: Widget<WidgetState>): VNodeProperties {
 					const baseIdProp = this.state && this.state.id ? { 'data-widget-id': this.state.id } : {};
@@ -221,17 +260,21 @@ const createWidget: WidgetFactory = createStateful
 					return assign(baseIdProp, { key: this, classes, styles });
 				}
 
-			],
+		],
 
 			render(this: Widget<WidgetState>): VNode | string | null {
 				const internalState = widgetInternalStateMap.get(this);
+
 				if (internalState.dirty || !internalState.cachedVNode) {
+					const updatedProperties = generateProperties(this, internalState.previousProperties);
+					this.processPropertiesChange(updatedProperties.previousProperties, updatedProperties.currentProperties);
 					const widget = dNodeToVNode(this, this.getNode());
 					manageDetachedChildren(this);
 					if (widget) {
 						internalState.cachedVNode = widget;
 					}
 					internalState.dirty = false;
+					internalState.previousProperties = this.properties;
 					return widget;
 				}
 				return internalState.cachedVNode;
@@ -244,13 +287,14 @@ const createWidget: WidgetFactory = createStateful
 			tagName: 'div'
 		},
 		initialize(instance: Widget<WidgetState>, options: WidgetOptions<WidgetState> = {}) {
-			const { id, tagName } = options;
-			instance.tagName = tagName || instance.tagName;
+			const { id, properties = {} } = options;
+			instance.properties = properties;
 
 			widgetInternalStateMap.set(instance, {
 				id,
 				dirty: true,
 				widgetClasses: [],
+				previousProperties: {},
 				factoryRegistry: new FactoryRegistry(),
 				initializedFactoryMap: new Map<string, Promise<WidgetFactory>>(),
 				historicChildrenMap: new Map<string | Promise<WidgetFactory> | WidgetFactory, Widget<WidgetState>>(),
