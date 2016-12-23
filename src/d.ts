@@ -1,34 +1,33 @@
-import { ComposeFactory } from 'dojo-compose/compose';
 import { assign } from 'dojo-core/lang';
 import { VNode, VNodeProperties } from 'dojo-interfaces/vdom';
 import { h } from 'maquette';
-import {
+import WidgetBase, {
 	DNode,
 	HNode,
 	WNode,
-	Widget,
+	WidgetBaseConstructor,
 	WidgetOptions,
 	WidgetState,
 	WidgetProperties
-} from './interfaces';
-import FactoryRegistry from './FactoryRegistry';
+} from './WidgetBase';
+import FactoryRegistry from './WidgetRegistry';
 
-export const registry = new FactoryRegistry();
+export const registry = new FactoryRegistry<any, any>();
 
-export function w<P extends WidgetProperties, S extends WidgetState, W extends Widget<S, P>, O extends WidgetOptions<S, P>>(
-	factory: ComposeFactory<W, O> | string,
+export function w<P extends WidgetProperties, S extends WidgetState, W extends WidgetBase<S, P>, O extends WidgetOptions<S, P>>(
+	factory: WidgetBaseConstructor<S, P> | string,
 	options: O
-): WNode;
-export function w<P extends WidgetProperties, S extends WidgetState, W extends Widget<S, P>, O extends WidgetOptions<S, P>>(
-	factory: ComposeFactory<W, O> | string,
+): WNode<S, P>;
+export function w<P extends WidgetProperties, S extends WidgetState, W extends WidgetBase<S, P>, O extends WidgetOptions<S, P>>(
+	factory: WidgetBaseConstructor<S, P> | string,
 	options: O,
-	children?: DNode[]
-): WNode;
-export function w<P extends WidgetProperties, S extends WidgetState, W extends Widget<S, P>, O extends WidgetOptions<S, P>>(
-	factory: ComposeFactory<W, O> | string,
+	children?: DNode<S, P>[]
+): WNode<S, P>;
+export function w<P extends WidgetProperties, S extends WidgetState, W extends WidgetBase<S, P>, O extends WidgetOptions<S, P>>(
+	factory: WidgetBaseConstructor<S, P> | string,
 	options: O,
-	children: DNode[] = []
-): WNode {
+	children: DNode<S, P>[] = []
+): WNode<S, P> {
 
 	return {
 		children,
@@ -37,10 +36,10 @@ export function w<P extends WidgetProperties, S extends WidgetState, W extends W
 	};
 }
 
-export function v(tag: string, properties: VNodeProperties, children?: DNode[]): HNode;
-export function v(tag: string, children: DNode[]): HNode;
-export function v(tag: string): HNode;
-export function v(tag: string, propertiesOrChildren: VNodeProperties = {}, children: DNode[] = []): HNode {
+export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, properties: VNodeProperties, children?: DNode<S, P>[]): HNode<S, P>;
+export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, children: DNode<S, P>[]): HNode<S, P>;
+export function v<S extends WidgetState, P extends WidgetProperties>(tag: string): HNode<S, P>;
+export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, propertiesOrChildren: VNodeProperties = {}, children: DNode<S, P>[] = []): HNode<S, P> {
 
 		if (Array.isArray(propertiesOrChildren)) {
 			children = propertiesOrChildren;
