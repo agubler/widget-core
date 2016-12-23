@@ -21,12 +21,12 @@ export function w<P extends WidgetProperties, S extends WidgetState, W extends W
 export function w<P extends WidgetProperties, S extends WidgetState, W extends WidgetBase<S, P>, O extends WidgetOptions<S, P>>(
 	factory: WidgetBaseConstructor<S, P> | string,
 	options: O,
-	children?: DNode<S, P>[]
+	children?: DNode<any, any>[]
 ): WNode<S, P>;
 export function w<P extends WidgetProperties, S extends WidgetState, W extends WidgetBase<S, P>, O extends WidgetOptions<S, P>>(
 	factory: WidgetBaseConstructor<S, P> | string,
 	options: O,
-	children: DNode<S, P>[] = []
+	children: DNode<any, any>[] = []
 ): WNode<S, P> {
 
 	return {
@@ -36,10 +36,10 @@ export function w<P extends WidgetProperties, S extends WidgetState, W extends W
 	};
 }
 
-export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, properties: VNodeProperties, children?: DNode<S, P>[]): HNode<S, P>;
-export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, children: DNode<S, P>[]): HNode<S, P>;
+export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, properties: VNodeProperties, children?: DNode<any, any>[]): HNode<S, P>;
+export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, children: DNode<any, any>[]): HNode<S, P>;
 export function v<S extends WidgetState, P extends WidgetProperties>(tag: string): HNode<S, P>;
-export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, propertiesOrChildren: VNodeProperties = {}, children: DNode<S, P>[] = []): HNode<S, P> {
+export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, propertiesOrChildren: VNodeProperties = {}, children: DNode<any, any>[] = []): HNode<S, P> {
 
 		if (Array.isArray(propertiesOrChildren)) {
 			children = propertiesOrChildren;

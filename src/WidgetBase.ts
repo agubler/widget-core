@@ -231,7 +231,7 @@ export class WidgetBase<S extends WidgetState, P extends WidgetProperties> exten
 		return registry.get(factoryLabel);
 	}
 
-	getNode(this: WidgetBase<S, P>): DNode<S, P> {
+	getNode(this: WidgetBase<S, P>): DNode<any, any> {
 		const tag = formatTagNameAndClasses(this.tagName, this.classes);
 		return v(tag, this.getNodeAttributes(), this.getChildrenNodes());
 	}
