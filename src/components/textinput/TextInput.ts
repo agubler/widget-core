@@ -7,11 +7,15 @@ export interface TypedTargetEvent<T extends EventTarget> extends Event {
 export interface TextInputState extends WidgetState {
 	disabled?: boolean;
 	value?: string;
+	focused?: boolean;
+	placeholder?: string;
 }
 
 export interface TextInputProperties extends WidgetProperties {
 	disabled?: boolean;
 	value?: string;
+	focused?: boolean;
+	placeholder?: string;
 }
 
 function valueReplacer(key: string, value: any): any {
@@ -30,10 +34,6 @@ function valueReviver(key: string, value: any): any {
 	return value;
 }
 
-/**
- * Internal function to convert a state value to a string
- * @param value The value to be converted
- */
 export function valueToString(value: any): string {
 	return value
 		? Array.isArray(value) || typeof value === 'object'
@@ -43,11 +43,6 @@ export function valueToString(value: any): string {
 			? 'false' : '';
 }
 
-/**
- * Internal function to convert a string to the likely more complex value stored in
- * state
- * @param str The string to convert to a state value
- */
 export function stringToValue(str: string): any {
 	try {
 		const value = JSON.parse(str, valueReviver);
@@ -80,10 +75,19 @@ class TextInput extends WidgetBase<TextInputState, TextInputProperties> {
 
 	private textInputAttributes(this: TextInput) {
 		const { type, value, state } = this;
-		const { disabled, name } = state;
+		const { disabled, name, placeholder } = state;
 
-		return { type, value, name, disabled: Boolean(disabled) };
+		return { type, value, name, placeholder, afterCreate: this.afterCreate, disabled: Boolean(disabled) };
+	}
 
+	private afterCreate(element: HTMLInputElement) {
+		const focused = this.state.focused;
+		if (focused) {
+			setTimeout(() => element.focus(), 0);
+		}
+		else if (!focused && document.activeElement === element) {
+			element.blur();
+		}
 	}
 
 	get value(this: TextInput): string {
