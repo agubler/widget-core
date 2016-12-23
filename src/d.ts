@@ -17,17 +17,17 @@ export const registry = new FactoryRegistry<any, any>();
 export function w<P extends WidgetProperties, S extends WidgetState, W extends WidgetBase<S, P>, O extends WidgetOptions<S, P>>(
 	factory: WidgetBaseConstructor<S, P> | string,
 	options: O
-): WNode<S, P>;
+): WNode<any, any>;
 export function w<P extends WidgetProperties, S extends WidgetState, W extends WidgetBase<S, P>, O extends WidgetOptions<S, P>>(
 	factory: WidgetBaseConstructor<S, P> | string,
 	options: O,
 	children?: DNode<any, any>[]
-): WNode<S, P>;
+): WNode<any, any>;
 export function w<P extends WidgetProperties, S extends WidgetState, W extends WidgetBase<S, P>, O extends WidgetOptions<S, P>>(
 	factory: WidgetBaseConstructor<S, P> | string,
 	options: O,
 	children: DNode<any, any>[] = []
-): WNode<S, P> {
+): WNode<any, any> {
 
 	return {
 		children,
@@ -36,10 +36,10 @@ export function w<P extends WidgetProperties, S extends WidgetState, W extends W
 	};
 }
 
-export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, properties: VNodeProperties, children?: DNode<any, any>[]): HNode<S, P>;
-export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, children: DNode<any, any>[]): HNode<S, P>;
-export function v<S extends WidgetState, P extends WidgetProperties>(tag: string): HNode<S, P>;
-export function v<S extends WidgetState, P extends WidgetProperties>(tag: string, propertiesOrChildren: VNodeProperties = {}, children: DNode<any, any>[] = []): HNode<S, P> {
+export function v(tag: string, properties: VNodeProperties, children?: DNode<any, any>[]): HNode<any, any>;
+export function v(tag: string, children: DNode<any, any>[]): HNode<any, any>;
+export function v(tag: string): HNode<any, any>;
+export function v(tag: string, propertiesOrChildren: VNodeProperties = {}, children: DNode<any, any>[] = []): HNode<any, any> {
 
 		if (Array.isArray(propertiesOrChildren)) {
 			children = propertiesOrChildren;
