@@ -20,13 +20,11 @@ export interface DialogProperties extends WidgetProperties {
 
 export interface DialogOptions extends WidgetOptions<DialogState, DialogProperties> { }
 
-export type Dialog = Widget<DialogState, DialogProperties>;
+export type Dialog = Widget<DialogState, DialogProperties> & {
+	onclose(): void;
+};
 
 export interface DialogFactory extends ComposeFactory<Dialog, DialogOptions> { };
-
-function onCloseClick(this: Dialog) {
-	this.setState({ open: false });
-}
 
 function onContentClick(this: Dialog, event: MouseEvent) {
 	event.stopPropagation();
@@ -43,6 +41,11 @@ function onUnderlayClick(this: Dialog, event: MouseEvent) {
 const createDialogWidget: DialogFactory = createWidgetBase
 	.mixin({
 		mixin: {
+			onclose(this: Dialog) {
+				if (this.properties.onclose) {
+					this.properties.onclose.call(this);
+				}
+			},
 			getChildrenNodes: function (this: Dialog): DNode[] {
 				const children: DNode[] = [
 					// TODO: CSS modules
@@ -50,7 +53,7 @@ const createDialogWidget: DialogFactory = createWidgetBase
 					// TODO: CSS modules
 					v('div.close', {
 						innerHTML: '✖',
-						onclick: onCloseClick
+						onclick: this.onclose
 					}),
 					// TODO: CSS modules
 					v('div.content', this.children)
@@ -63,7 +66,6 @@ const createDialogWidget: DialogFactory = createWidgetBase
 			nodeAttributes: [
 				function(this: Dialog): VNodeProperties {
 					this.state.open && this.properties.onopen && this.properties.onopen();
-					!this.state.open && this.properties.onclose && this.properties.onclose();
 					return { 'data-open': this.state.open ? 'true' : 'false' };
 				},
 				function(this: Dialog): VNodeProperties {
