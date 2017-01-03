@@ -22,20 +22,13 @@ export interface DialogOptions extends WidgetOptions<DialogState, DialogProperti
 
 export type Dialog = Widget<DialogState, DialogProperties> & {
 	onclose(): void;
+	onUnderlayClick(): void;
 };
 
 export interface DialogFactory extends ComposeFactory<Dialog, DialogOptions> { };
 
 function onContentClick(this: Dialog, event: MouseEvent) {
 	event.stopPropagation();
-}
-
-function onUnderlayClick(this: Dialog, event: MouseEvent) {
-	if (this.state.modal) {
-		return;
-	}
-
-	this.setState({ open: false });
 }
 
 const createDialogWidget: DialogFactory = createWidgetBase
@@ -46,19 +39,21 @@ const createDialogWidget: DialogFactory = createWidgetBase
 					this.properties.onclose.call(this);
 				}
 			},
+			onUnderlayClick(this: Dialog) {
+				if (this.state.modal) {
+					return;
+				}
+				this.onclose.call(this);
+			},
 			getChildrenNodes: function (this: Dialog): DNode[] {
 				const children: DNode[] = [
-					// TODO: CSS modules
 					v('div.title', { innerHTML: this.state.title }),
-					// TODO: CSS modules
 					v('div.close', {
 						innerHTML: '✖',
 						onclick: this.onclose
 					}),
-					// TODO: CSS modules
 					v('div.content', this.children)
 				];
-				// TODO: CSS modules
 				const content: DNode = v('div.content', { onclick: onContentClick }, children);
 				return [ content ];
 			},
@@ -66,15 +61,16 @@ const createDialogWidget: DialogFactory = createWidgetBase
 			nodeAttributes: [
 				function(this: Dialog): VNodeProperties {
 					this.state.open && this.properties.onopen && this.properties.onopen();
-					return { 'data-open': this.state.open ? 'true' : 'false' };
+					return {
+						onclick: this.onUnderlayClick,
+						'data-open': this.state.open ? 'true' : 'false',
+						'data-modal': this.state.modal ? 'true' : 'false'
+					};
 				},
 				function(this: Dialog): VNodeProperties {
 					return { 'data-modal': this.state.modal ? 'true' : 'false' };
 				}
 			],
-
-			listeners: { onclick: onUnderlayClick },
-
 			// TODO: CSS modules
 			classes: [ 'dialog' ]
 		}
