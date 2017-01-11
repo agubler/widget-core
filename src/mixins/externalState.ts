@@ -137,10 +137,12 @@ const externalStateFactory: ExternalStateFactory = createEvented.mixin({
 				});
 		}
 	},
-	initialize(instance: ExternalState) {
+	initialize(instance: ExternalState, options: ExternalStateOptions) {
 		instance.own(instance.on('properties:changed', (evt: PropertiesChangeEvent<ExternalStateMixin, ExternalStateProperties>) => {
 			onPropertiesChanged(instance, evt.properties, evt.changedPropertyKeys);
 		}));
+		instance.properties = options.properties;
+		instance.observe();
 	}
 });
 
