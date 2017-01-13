@@ -2,24 +2,12 @@ import { VNodeProperties } from 'dojo-interfaces/vdom';
 import { ComposeFactory } from 'dojo-compose/compose';
 import createStateful from 'dojo-compose/bases/createStateful';
 import createCancelableEvent from 'dojo-compose/bases/createCancelableEvent';
-import { EventTargettedObject, EventCancelableObject, Handle } from 'dojo-interfaces/core';
-import { EventedListener, Stateful, StatefulOptions } from 'dojo-interfaces/bases';
+import { EventCancelableObject, Handle } from 'dojo-interfaces/core';
+import { EventedListener, Stateful } from 'dojo-interfaces/bases';
 import { assign } from 'dojo-core/lang';
-import { NodeAttributeFunction } from './../interfaces';
+import { NodeAttributeFunction, WidgetProperties, WidgetOptions, WidgetState } from './../interfaces';
 
-export interface FormFieldMixinOptions<V, S extends FormFieldMixinState<V>> extends StatefulOptions<S> {
-	/**
-	 * The type of the form field (equates to the `type` attribute in the DOM)
-	 */
-	type?: string;
-
-	/**
-	 * The value of the form field
-	 */
-	value?: V;
-}
-
-export interface FormFieldMixinState<V> {
+export interface FormFieldMixinProperties extends WidgetProperties {
 	/**
 	 * Whether the field is currently disabled or not
 	 */
@@ -33,14 +21,23 @@ export interface FormFieldMixinState<V> {
 	/**
 	 * The current value
 	 */
-	value?: V;
+	value?: string;
+
+	/**
+	 * Form type
+	 */
+	type?: string;
 }
 
-export interface ValueChangeEvent<V> extends EventCancelableObject<'valuechange', FormFieldMixin<V, FormFieldMixinState<V>>> {
+export interface FormFieldMixinState extends WidgetState {
+	value?: string;
+}
+
+export interface ValueChangeEvent extends EventCancelableObject<'value:changed', FormFieldMixin<FormFieldMixinProperties>> {
 	/**
 	 * The event type (in this case, `valuechange`)
 	 */
-	type: 'valuechange';
+	type: 'value:changed';
 
 	/**
 	 * The previous value before this event
@@ -53,129 +50,61 @@ export interface ValueChangeEvent<V> extends EventCancelableObject<'valuechange'
 	value: string;
 }
 
-export interface FormField<V> {
+export interface FormField<P extends FormFieldMixinProperties> {
 	/**
 	 * An array of functions that generate the node attributes on a render
 	 */
 	nodeAttributes: NodeAttributeFunction<this>[];
 
 	/**
-	 * The HTML type for this widget
+	 * Form field properties
 	 */
-	type?: string;
-
-	/**
-	 * The string value of this form widget, which is read from the widget state
-	 */
-	value?: string;
+	readonly properties?: P;
 }
 
-export interface FormFieldOverride<V> {
+export interface FormFieldOverride {
 	/**
 	 * Add listener for a `valuechange` event, emitted when the value on the widget changes
 	 */
-	on(type: 'valuechange', listener: EventedListener<FormFieldMixin<V, FormFieldMixinState<V>>, ValueChangeEvent<V>>): Handle;
-	on(type: string, listener: EventedListener<V, EventTargettedObject<V>>): Handle;
+	on(type: 'value:changed', listener: EventedListener<FormFieldMixin<FormFieldMixinProperties>, ValueChangeEvent>): Handle;
+
 }
 
-export type FormFieldMixin<V, S extends FormFieldMixinState<V>> = FormField<V> & Stateful<S> & FormFieldOverride<V>;
+export type FormFieldMixin<P extends FormFieldMixinProperties> = FormField<P> & Stateful<FormFieldMixinState> & FormFieldOverride
 
-export interface FormMixinFactory extends ComposeFactory<FormFieldMixin<any, FormFieldMixinState<any>>, FormFieldMixinOptions<any, FormFieldMixinState<any>>> {
-	<V>(options?: FormFieldMixinOptions<V, FormFieldMixinState<V>>): FormFieldMixin<V, FormFieldMixinState<V>>;
-}
+export interface FormMixinFactory extends ComposeFactory<FormFieldMixin<FormFieldMixinProperties>, WidgetOptions<FormFieldMixinState, FormFieldMixinProperties>> { }
 
-function valueReplacer(key: string, value: any): any {
-	if (value instanceof RegExp) {
-		return (`__RegExp(${value.toString()})`);
-	}
-	return value;
-}
-
-function valueReviver(key: string, value: any): any {
-	if (value.toString().indexOf('__RegExp(') === 0) {
-		const [ , regExpStr ] = value.match(/__RegExp\(([^\)]*)\)/);
-		const [ , regExp, flags ] = regExpStr.match(/^\/(.*?)\/([gimy]*)$/);
-		return new RegExp(regExp, flags);
-	}
-	return value;
-}
-
-/**
- * Internal function to convert a state value to a string
- * @param value The value to be converted
- */
-export function valueToString(value: any): string {
-	return value
-		? Array.isArray(value) || typeof value === 'object'
-			? JSON.stringify(value, valueReplacer) : String(value)
-		: value === 0
-			? '0' : value === false
-				? 'false' : '';
-}
-
-/**
- * Internal function to convert a string to the likely more complex value stored in
- * state
- * @param str The string to convert to a state value
- */
-export function stringToValue(str: string): any {
-	try {
-		const value = JSON.parse(str, valueReviver);
-		return value;
-	}
-	catch (e) {
-		if (/^(\-|\+)?([0-9]+(\.[0-9]+)?|Infinity)$/.test(str)) {
-			return Number(str);
-		}
-		if (str) {
-			return str;
-		}
-		return undefined;
-	}
-}
+const defaultFormFieldProperties: FormFieldMixinProperties = {
+	disabled: false,
+	name: undefined,
+	type: undefined
+};
 
 const createFormMixin: FormMixinFactory = createStateful
 	.mixin({
-		mixin: <FormField<any>> {
-			get value(this: FormFieldMixin<any, FormFieldMixinState<any>>): string {
-				return valueToString(this.state.value);
+		mixin: {
+			get value(this: FormFieldMixin<FormFieldMixinProperties>): string | undefined {
+				return this.state['value'];
 			},
 
-			set value(this: FormFieldMixin<any, FormFieldMixinState<any>>, value: string) {
-				if (value !== this.state.value) {
-					const event = assign(createCancelableEvent({
-						type: 'valuechange',
-						target: this
-					}), {
-						oldValue: valueToString(this.state.value),
-						value
-					});
-					this.emit(event);
-					if (!event.defaultPrevented) {
-						this.setState({ value: stringToValue(event.value) });
+			set value(this: FormFieldMixin<FormFieldMixinProperties>, value: string | undefined) {
+				const { state: { value: oldValue } } = this;
+				if (value !== oldValue) {
+					const valueChangedEvent = createCancelableEvent({ type: 'value:changed', target: this });
+					this.emit(assign(valueChangedEvent, { oldValue, value }));
+					if (!valueChangedEvent.defaultPrevented) {
+						this.setState({ value });
 					}
 				}
 			},
 
 			nodeAttributes: [
-				function (this: FormFieldMixin<any, FormFieldMixinState<any>>): VNodeProperties {
-					const { type, value, state } = this;
-					const { disabled, name } = state;
+				function (this: FormFieldMixin<FormFieldMixinProperties>): VNodeProperties {
+					const { properties: { type, name, disabled } = defaultFormFieldProperties, state: { value } } = this;
 
 					return { type, value, name, disabled: Boolean(disabled) };
 				}
 			]
-		},
-		initialize(
-			instance: FormFieldMixin<any, FormFieldMixinState<any>>,
-			{ value, type }: FormFieldMixinOptions<any, FormFieldMixinState<any>> = {}
-		) {
-			if (value) {
-				instance.setState({ value });
-			}
-			if (type) {
-				instance.type = type;
-			}
 		}
 	});
 
