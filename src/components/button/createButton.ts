@@ -2,6 +2,7 @@ import { VNodeProperties } from '@dojo/interfaces/vdom';
 import createWidgetBase from '../../createWidgetBase';
 import { Widget, WidgetProperties, WidgetFactory } from './../../interfaces';
 import createFormFieldMixin, { FormFieldMixin } from '../../mixins/createFormFieldMixin';
+import themeableMixin, { Themeable} from '../../mixins/createThemeableMixin';
 
 export interface ButtonProperties extends WidgetProperties {
 	label?: string;
@@ -9,7 +10,7 @@ export interface ButtonProperties extends WidgetProperties {
 	onClick?(event: MouseEvent): void;
 }
 
-export type Button = Widget<ButtonProperties> & FormFieldMixin<string, any> & {
+export type Button = Widget<ButtonProperties> & FormFieldMixin<string, any> & Themeable & {
 	onClick(event?: MouseEvent): void;
 };
 
@@ -17,6 +18,7 @@ export interface ButtonFactory extends WidgetFactory<Button, ButtonProperties> {
 
 const createButton: ButtonFactory = createWidgetBase
 	.mixin(createFormFieldMixin)
+	.mixin(themeableMixin)
 	.mixin({
 		mixin: {
 			onClick(this: Button, event: MouseEvent) {
@@ -28,7 +30,10 @@ const createButton: ButtonFactory = createWidgetBase
 				}
 			],
 			tagName: 'button',
-			type: 'button'
+			type: 'button',
+			baseTheme: {
+				hello: 'world'
+			}
 		}
 	});
 
