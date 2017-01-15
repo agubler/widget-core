@@ -134,6 +134,10 @@ export interface WidgetOverloads<P extends WidgetProperties> {
 
 export interface PropertyComparison<P extends WidgetProperties> {
 	/**
+	 * index type
+	 */
+	[index: string]: any;
+	/**
 	 * Determine changed or new property keys on setProperties
 	 */
 	diffProperties<S>(this: S, previousProperties: P, newProperties: P): string[];

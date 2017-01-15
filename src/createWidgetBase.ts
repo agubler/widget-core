@@ -139,6 +139,10 @@ function formatTagNameAndClasses(tagName: string, classes: string[]) {
 	return tagName;
 }
 
+function getApplyFunctionName(value: string) {
+	return `apply${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
+};
+
 const createWidget: WidgetBaseFactory = createStateful
 	.mixin<WidgetMixin<WidgetProperties>, WidgetOptions<WidgetState, WidgetProperties>>({
 		mixin: {
@@ -199,6 +203,23 @@ const createWidget: WidgetBaseFactory = createStateful
 				const changedPropertyKeys = this.diffProperties(internalState.previousProperties, properties);
 				this.properties = this.assignProperties(internalState.previousProperties, properties, changedPropertyKeys);
 				if (changedPropertyKeys.length) {
+
+					changedPropertyKeys.forEach((property) => {
+						const applyFunctionName = getApplyFunctionName(property);
+						if (typeof this[applyFunctionName] === 'function') {
+							this[applyFunctionName](this.properties[property]);
+						}
+					});
+
+					changedPropertyKeys.forEach((property: string) => {
+						this.emit({
+							type: `${property}:changed`,
+							target: this,
+							value: this.properties[property],
+							properties: this.properties
+						});
+					});
+
 					this.emit({
 						type: 'properties:changed',
 						target: this,
