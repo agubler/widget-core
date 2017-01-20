@@ -13,7 +13,7 @@ registerSuite({
 				name: 'baz'
 			}
 		});
-		assert.strictEqual(button.properties.id, 'foo');
+		assert.strictEqual(button.properties['id'], 'foo');
 		assert.strictEqual(button.properties.label, 'bar');
 		assert.strictEqual(button.properties.name, 'baz');
 	},

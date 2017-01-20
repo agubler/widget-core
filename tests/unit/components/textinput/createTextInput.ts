@@ -11,7 +11,7 @@ registerSuite({
 				name: 'baz'
 			}
 		});
-		assert.strictEqual(textInput.properties.id, 'foo');
+		assert.strictEqual(textInput.properties['id'], 'foo');
 		assert.strictEqual(textInput.properties.name, 'baz');
 	},
 	nodeAttributes() {

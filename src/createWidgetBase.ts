@@ -245,7 +245,7 @@ const createWidget: WidgetBaseFactory = createEvented
 
 			nodeAttributes: [
 				function (this: Widget<WidgetProperties>): VNodeProperties {
-					const baseIdProp = this.properties && this.properties.id ? { 'data-widget-id': this.properties.id } : {};
+					const baseIdProp = this.properties && this.properties['id'] ? { 'data-widget-id': this.properties['id'] } : {};
 					const { styles = {} } = this.properties || {};
 					const classes: { [index: string]: boolean; } = {};
 
