@@ -191,7 +191,7 @@ const createWidget: WidgetBaseFactory = createStateful
 			},
 
 			get id(this: Widget<WidgetProperties>): string | undefined {
-				return this.properties.id;
+				return this.properties['id'];
 			},
 
 			setProperties(this: Widget<WidgetProperties>, properties: WidgetProperties) {
