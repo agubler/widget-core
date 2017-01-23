@@ -79,7 +79,7 @@ function dNodeToVNode(instance: Widget<WidgetProperties>, dNode: DNode, index: n
 			}
 		}
 
-		const childrenMapKey = id ? [ id, factory, index ] : [ factory, index ];
+		const childrenMapKey = id ? [ id, factory ] : [ factory, index++ ];
 		const cachedChild = internalState.historicChildrenMap.get(childrenMapKey);
 
 		if (cachedChild) {
@@ -106,7 +106,6 @@ function dNodeToVNode(instance: Widget<WidgetProperties>, dNode: DNode, index: n
 	dNode.children = dNode.children
 		.filter((child) => child !== null)
 		.map((child: DNode) => {
-			index++;
 			return dNodeToVNode(instance, child, index);
 		});
 
