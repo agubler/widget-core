@@ -18,6 +18,7 @@ import WeakMap from '@dojo/shim/WeakMap';
 import Promise from '@dojo/shim/Promise';
 import Map from '@dojo/shim/Map';
 import { v, registry, isWNode } from './d';
+import { MultiMap } from './MultiMap';
 
 interface WidgetInternalState {
 	children: DNode[];
@@ -27,8 +28,8 @@ interface WidgetInternalState {
 	initializedFactoryMap: Map<string, Promise<WidgetBaseFactory>>;
 	properties: WidgetProperties;
 	previousProperties: WidgetProperties;
-	historicChildrenMap: Map<string | Promise<WidgetBaseFactory> | WidgetBaseFactory, Widget<WidgetProperties>>;
-	currentChildrenMap: Map<string | Promise<WidgetBaseFactory> | WidgetBaseFactory, Widget<WidgetProperties>>;
+	historicChildrenMap: MultiMap<Widget<WidgetProperties>>;
+	currentChildrenMap: MultiMap<Widget<WidgetProperties>>;
 	diffPropertyFunctionMap: Map<string, string>;
 };
 
@@ -46,7 +47,7 @@ function getFromRegistry(instance: Widget<WidgetProperties>, factoryLabel: strin
 	return registry.get(factoryLabel);
 }
 
-function dNodeToVNode(instance: Widget<WidgetProperties>, dNode: DNode): VNode | string | null {
+function dNodeToVNode(instance: Widget<WidgetProperties>, dNode: DNode, index: number = 0): VNode | string | null {
 	const internalState = widgetInternalStateMap.get(instance);
 
 	if (typeof dNode === 'string' || dNode === null) {
@@ -78,7 +79,7 @@ function dNodeToVNode(instance: Widget<WidgetProperties>, dNode: DNode): VNode |
 			}
 		}
 
-		const childrenMapKey = id || factory;
+		const childrenMapKey = id ? [ id, factory, index ] : [ factory, index ];
 		const cachedChild = internalState.historicChildrenMap.get(childrenMapKey);
 
 		if (cachedChild) {
@@ -95,11 +96,6 @@ function dNodeToVNode(instance: Widget<WidgetProperties>, dNode: DNode): VNode |
 			internalState.historicChildrenMap.set(childrenMapKey, child);
 			instance.own(child);
 		}
-		if (!id && internalState.currentChildrenMap.has(factory)) {
-			const errorMsg = 'must provide unique keys when using the same widget factory multiple times';
-			console.error(errorMsg);
-			instance.emit({ type: 'error', target: instance, error: new Error(errorMsg) });
-		}
 
 		child.setChildren(children);
 		internalState.currentChildrenMap.set(childrenMapKey, child);
@@ -110,7 +106,8 @@ function dNodeToVNode(instance: Widget<WidgetProperties>, dNode: DNode): VNode |
 	dNode.children = dNode.children
 		.filter((child) => child !== null)
 		.map((child: DNode) => {
-			return dNodeToVNode(instance, child);
+			index++;
+			return dNodeToVNode(instance, child, index);
 		});
 
 	return dNode.render({ bind: instance });
@@ -119,7 +116,7 @@ function dNodeToVNode(instance: Widget<WidgetProperties>, dNode: DNode): VNode |
 function manageDetachedChildren(instance: Widget<WidgetProperties>): void {
 	const internalState = widgetInternalStateMap.get(instance);
 
-	internalState.historicChildrenMap.forEach((child, key) => {
+	internalState.historicChildrenMap.entries().forEach(([ child, key ]) => {
 		if (!internalState.currentChildrenMap.has(key) && internalState.historicChildrenMap.has(key)) {
 			internalState.historicChildrenMap.delete(key);
 			child.destroy();
@@ -299,8 +296,8 @@ const createWidget: WidgetBaseFactory = createEvented
 				properties: {},
 				previousProperties: {},
 				initializedFactoryMap: new Map<string, Promise<WidgetBaseFactory>>(),
-				historicChildrenMap: new Map<string | Promise<WidgetBaseFactory> | WidgetBaseFactory, Widget<WidgetProperties>>(),
-				currentChildrenMap: new Map<string | Promise<WidgetBaseFactory> | WidgetBaseFactory, Widget<WidgetProperties>>(),
+				historicChildrenMap: new MultiMap<Widget<WidgetProperties>>(),
+				currentChildrenMap: new MultiMap<Widget<WidgetProperties>>(),
 				diffPropertyFunctionMap,
 				children: []
 			});
