@@ -95,6 +95,7 @@ registerSuite({
 			assert.lengthOf(vnode.children, 2);
 			assert.strictEqual(vnode.children![0].properties!.innerHTML, 'bar');
 			assert.isTrue(vnode.children![0].properties!.classes!['visually-hidden']);
+			assert.strictEqual(vnode.children![1].vnodeSelector, 'div');
 
 			formField.setProperties({
 				label: {
