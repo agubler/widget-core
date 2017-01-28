@@ -11,20 +11,6 @@ import { VNode, VNodeProperties } from '@dojo/interfaces/vdom';
 import { ComposeFactory } from '@dojo/compose/compose';
 
 /**
- * A function that is called to return top level node
- */
-export interface NodeFunction {
-	(this: Widget<WidgetProperties>): DNode;
-}
-
-/**
- * A function that is called when collecting the children nodes on render.
- */
-export interface ChildNodeFunction {
-	(this: Widget<WidgetProperties>): DNode[];
-}
-
-/**
  * the event emitted on properties:changed
  */
 export interface PropertiesChangeEvent<T, P extends WidgetProperties> extends EventTypedObject<'properties:changed'> {
@@ -40,19 +26,6 @@ export interface PropertiesChangeEvent<T, P extends WidgetProperties> extends Ev
 	 * the target (this)
 	 */
 	target: T;
-}
-
-/**
- * A function that is called when collecting the node attributes on render, accepting the current map of
- * attributes and returning a set of VNode properties that should mixed into the current attributes.
- */
-export interface NodeAttributeFunction<T> {
-	/**
-	 * A function which can return additional VNodeProperties which are
-	 *
-	 * @param attributes The current VNodeProperties that will be part of the render
-	 */
-	(this: T, attributes: VNodeProperties): VNodeProperties;
 }
 
 export type WidgetFactoryFunction = () => Promise<WidgetBaseFactory>
@@ -81,15 +54,25 @@ export interface FactoryRegistryInterface {
 }
 
 export interface HNode {
+
+	/**
+	 * Array of processed VNode children.
+	 */
+	vnodes?: (string | VNode | null)[];
 	/**
 	 * Specified children
 	 */
-	children: (DNode | (VNode | string))[];
+	children: (DNode | string)[];
 
 	/**
 	 * render function that wraps returns VNode
 	 */
 	render<T>(options?: { bind?: T }): VNode;
+
+	/**
+	 * The properties used to create the vnode
+	 */
+	properties: VNodeProperties;
 
 	/**
 	 * The type of node
@@ -167,14 +150,6 @@ export interface WidgetMixin<P extends WidgetProperties> extends PropertyCompari
 	readonly [index: string]: any;
 
 	/**
-	 * Classes which are applied upon render.
-	 *
-	 * This property is intended for "static" classes.  Classes which are aligned to the instance should be
-	 * stored in the instances state object.
-	 */
-	readonly classes: string[];
-
-	/**
 	 * An array of children `DNode`s returned via `getChildrenNodes`
 	 */
 	readonly children: DNode[];
@@ -187,20 +162,12 @@ export interface WidgetMixin<P extends WidgetProperties> extends PropertyCompari
 	/**
 	 * Get the top level node and children when rendering the widget.
 	 */
-	getNode: NodeFunction;
+	getNode(): DNode;
 
 	/**
 	 * Generate the children nodes when rendering the widget.
 	 */
-	getChildrenNodes: ChildNodeFunction;
-
-	/**
-	 * Generate the node attributes when rendering the widget.
-	 *
-	 * Mixins should not override or aspect this method, but instead provide a function as part of the
-	 * `nodeAttributes` property, which will automatically get called by this method upon render.
-	 */
-	getNodeAttributes(): VNodeProperties;
+	getChildrenNodes(): DNode[];
 
 	/**
 	 * Properties passed to affect state
@@ -227,12 +194,10 @@ export interface WidgetMixin<P extends WidgetProperties> extends PropertyCompari
 	invalidate(): void;
 
 	/**
-	 * An array of functions that return a map of VNodeProperties which should be mixed into the final
-	 * properties used when rendering this widget.  These are intended to be "static" and bund to the class,
-	 * making it easy for mixins to alter the behaviour of the render process without needing to override or aspect
-	 * the `getNodeAttributes` method.
+	 * Public render function that defines the widget structure using DNode and HNodes. Must return
+	 * a single top element.
 	 */
-	nodeAttributes: NodeAttributeFunction<Widget<WidgetProperties>>[];
+	render(): DNode;
 
 	/**
 	 * Render the widget, returing the virtual DOM node that represents this widget.
@@ -240,20 +205,8 @@ export interface WidgetMixin<P extends WidgetProperties> extends PropertyCompari
 	 * It is not intended that mixins will override or aspect this method, as the render process is decomposed to
 	 * allow easier modification of behaviour of the render process.  The base implementatin intelligently caches
 	 * its render and essentially provides the following return for the method:
-	 *
-	 * ```typescript
-	 * return h(this.tagName, this.getNodeAttributes(), this.getChildrenNodes());
-	 * ```
 	 */
 	__render__(): VNode | string | null;
-
-	/**
-	 * The tagName (selector) that should be used when rendering the node.
-	 *
-	 * If there is logic that is required to determine this value on render, a mixin should consider overriding
-	 * this property with a getter.
-	 */
-	tagName: string;
 
 	/**
 	 * The specific Factory Registry on the widget if passed
@@ -266,8 +219,6 @@ export interface WidgetOptions<P extends WidgetProperties> extends EventedOption
 	 * Properties used to affect internal widget state
 	 */
 	properties?: P;
-
-	tagName?: string;
 }
 
 export interface WidgetProperties {
@@ -277,7 +228,7 @@ export interface WidgetProperties {
 	classes?: string[];
 }
 
-export interface WidgetFactory<W extends Widget<P>, P extends WidgetProperties> extends ComposeFactory<W, WidgetOptions<P>> {}
+export interface WidgetFactory<W extends WidgetMixin<P>, P extends WidgetProperties> extends ComposeFactory<W, WidgetOptions<P>> {}
 
 export interface TypedTargetEvent<T extends EventTarget> extends Event {
 	target: T;
