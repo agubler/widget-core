@@ -4,7 +4,6 @@ import { EventedListenerOrArray } from '@dojo/interfaces/bases';
 import { VNode } from '@dojo/interfaces/vdom';
 import Map from '@dojo/shim/Map';
 import Promise from '@dojo/shim/Promise';
-import Set from '@dojo/shim/Set';
 import WeakMap from '@dojo/shim/WeakMap';
 import { v, registry, isWNode } from './d';
 import FactoryRegistry, { WIDGET_BASE_TYPE } from './FactoryRegistry';
@@ -35,6 +34,13 @@ interface DiffPropertyConfig {
 	propertyName: string;
 	diffFunction: Function;
 }
+
+interface BoundFunctionWrapper {
+	boundFunc: (...args: any[]) => any;
+	scope: any;
+};
+
+type CachedChildrenMapKey = string | Promise<WidgetConstructor> | WidgetConstructor;
 
 export interface WidgetBaseEvents<P extends WidgetProperties> extends BaseEventedEvents {
 	(type: 'properties:changed', handler: EventedListenerOrArray<WidgetBase<P>, PropertiesChangeEvent<WidgetBase<P>, P>>): Handle;
@@ -78,54 +84,42 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 	/**
 	 * children array
 	 */
-	private  _children: DNode[];
+	private _children: DNode[] = [];
 
 	/**
 	 * marker indicating if the widget requires a render
 	 */
-	private dirty: boolean;
+	private _dirty: boolean = false;
 
 	/**
 	 * cachedVNode from previous render
 	 */
-	private cachedVNode?: VNode | string;
-
-	on: WidgetBaseEvents<P>;
+	private _cachedVNode?: VNode | string;
 
 	/**
 	 * internal widget properties
 	 */
-	private  _properties: P;
+	private  _properties: P = <P> {};
 
 	/**
 	 * properties from the previous render
 	 */
-	private previousProperties: P & { [index: string]: any };
+	private _previousProperties: P & { [index: string]: any } = <P> {};
 
 	/**
 	 * Map of factory promises
 	 */
-	private initializedFactoryMap: Map<string, Promise<WidgetConstructor>>;
+	private _initializedFactoryMap: Map<string, Promise<WidgetConstructor>> = new Map<string, Promise<WidgetConstructor>>();
 
 	/**
 	 * cached chldren map for instance management
 	 */
-	private cachedChildrenMap: Map<string | Promise<WidgetConstructor> | WidgetConstructor, WidgetCacheWrapper[]>;
-
-	/**
-	 * map of specific property diff functions
-	 */
-	private diffPropertyFunctionMap: Map<string, string>;
-
-	/**
-	 * set of render decorators
-	 */
-	private renderDecorators: Set<string>;
+	private _cachedChildrenMap: Map<CachedChildrenMapKey, WidgetCacheWrapper[]> = new Map<CachedChildrenMapKey, WidgetCacheWrapper[]>();
 
 	/**
 	 * Map of functions properties for the bound function
 	 */
-	private bindFunctionPropertyMap: WeakMap<(...args: any[]) => any, { boundFunc: (...args: any[]) => any, scope: any }>;
+	private _bindFunctionPropertyMap: WeakMap<(...args: any[]) => any, BoundFunctionWrapper > =  new WeakMap<(...args: any[]) => any, BoundFunctionWrapper>();
 
 	/**
 	 * A generic property bag for decorators
@@ -138,19 +132,15 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 	protected registry: FactoryRegistry | undefined;
 
 	/**
+	 * Define the support widget base events
+	 */
+	public on: WidgetBaseEvents<P>;
+
+	/**
 	 * @constructor
 	 */
 	constructor() {
 		super({});
-
-		this._children = [];
-		this._properties = <P> {};
-		this.previousProperties = <P> {};
-		this.initializedFactoryMap = new Map<string, Promise<WidgetConstructor>>();
-		this.cachedChildrenMap = new Map<string | Promise<WidgetConstructor> | WidgetConstructor, WidgetCacheWrapper[]>();
-		this.diffPropertyFunctionMap = new Map<string, string>();
-		this.renderDecorators = new Set<string>();
-		this.bindFunctionPropertyMap = new WeakMap<(...args: any[]) => any, { boundFunc: (...args: any[]) => any, scope: any }>();
 
 		this.own(this.on('properties:changed', (evt) => {
 			this.invalidate();
@@ -175,7 +165,7 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 		const registeredDiffPropertyConfigs: DiffPropertyConfig[] = this.getDecorator('diffProperty') || [];
 
 		registeredDiffPropertyConfigs.forEach(({ propertyName, diffFunction }) => {
-			const previousProperty = this.previousProperties[propertyName];
+			const previousProperty = this._previousProperties[propertyName];
 			const newProperty = (<any> properties)[propertyName];
 			const result: PropertyChangeRecord = diffFunction(previousProperty, newProperty);
 
@@ -187,11 +177,11 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 				diffPropertyChangedKeys.push(propertyName);
 			}
 			delete (<any> properties)[propertyName];
-			delete this.previousProperties[propertyName];
+			delete this._previousProperties[propertyName];
 			diffPropertyResults[propertyName] = result.value;
 		});
 
-		const diffPropertiesResult = this.diffProperties(this.previousProperties, properties);
+		const diffPropertiesResult = this.diffProperties(this._previousProperties, properties);
 		this._properties = assign(diffPropertiesResult.properties, diffPropertyResults);
 
 		const changedPropertyKeys = [...diffPropertiesResult.changedKeys, ...diffPropertyChangedKeys];
@@ -204,7 +194,7 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 				changedPropertyKeys
 			});
 		}
-		this.previousProperties = this.properties;
+		this._previousProperties = this.properties;
 	}
 
 	public get children(): DNode[] {
@@ -235,7 +225,7 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 	}
 
 	public __render__(): VNode | string | null {
-		if (this.dirty || !this.cachedVNode) {
+		if (this._dirty || !this._cachedVNode) {
 			let dNode = this.render();
 			const afterRenders = this.getDecorator('afterRender') || [];
 			afterRenders.forEach((afterRenderFunction: Function) => {
@@ -244,16 +234,16 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 			const widget = this.dNodeToVNode(dNode);
 			this.manageDetachedChildren();
 			if (widget) {
-				this.cachedVNode = widget;
+				this._cachedVNode = widget;
 			}
-			this.dirty = false;
+			this._dirty = false;
 			return widget;
 		}
-		return this.cachedVNode;
+		return this._cachedVNode;
 	}
 
 	public invalidate(): void {
-		this.dirty = true;
+		this._dirty = true;
 		this.emit({
 			type: 'invalidated',
 			target: this
@@ -271,12 +261,12 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 			const bind = properties.bind;
 
 			if (typeof property === 'function') {
-				const bindInfo = this.bindFunctionPropertyMap.get(property) || {};
+				const bindInfo = this._bindFunctionPropertyMap.get(property) || {};
 				let { boundFunc, scope } = bindInfo;
 
 				if (!boundFunc || scope !== bind) {
 					boundFunc = property.bind(bind);
-					this.bindFunctionPropertyMap.set(property, { boundFunc, scope: bind });
+					this._bindFunctionPropertyMap.set(property, { boundFunc, scope: bind });
 				}
 				properties[propertyKey] = boundFunc;
 			}
@@ -348,12 +338,12 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 				const item = this.getFromRegistry(factory);
 
 				if (item instanceof Promise) {
-					if (item && !this.initializedFactoryMap.has(factory)) {
+					if (item && !this._initializedFactoryMap.has(factory)) {
 						const promise = item.then((factory) => {
 							this.invalidate();
 							return factory;
 						});
-						this.initializedFactoryMap.set(factory, promise);
+						this._initializedFactoryMap.set(factory, promise);
 					}
 					return null;
 				}
@@ -365,7 +355,7 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 			}
 
 			const childrenMapKey = key || factory;
-			let cachedChildren = this.cachedChildrenMap.get(childrenMapKey) || [];
+			let cachedChildren = this._cachedChildrenMap.get(childrenMapKey) || [];
 			let cachedChild: WidgetCacheWrapper | undefined;
 			cachedChildren.some((cachedChildWrapper) => {
 				if (cachedChildWrapper.factory === factory && !cachedChildWrapper.used) {
@@ -391,7 +381,7 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 					this.invalidate();
 				}));
 				cachedChildren = [...cachedChildren, { child, factory, used: true }];
-				this.cachedChildrenMap.set(childrenMapKey, cachedChildren);
+				this._cachedChildrenMap.set(childrenMapKey, cachedChildren);
 				this.own(child);
 			}
 			if (!key && cachedChildren.length > 1) {
@@ -417,7 +407,7 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 	 * Manage widget instances after render processing
 	 */
 	private manageDetachedChildren(): void {
-		this.cachedChildrenMap.forEach((cachedChildren, key) => {
+		this._cachedChildrenMap.forEach((cachedChildren, key) => {
 			const filterCachedChildren = cachedChildren.filter((cachedChild) => {
 				if (cachedChild.used) {
 					cachedChild.used = false;
@@ -426,7 +416,7 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 				cachedChild.child.destroy();
 				return false;
 			});
-			this.cachedChildrenMap.set(key, filterCachedChildren);
+			this._cachedChildrenMap.set(key, filterCachedChildren);
 		});
 	}
 }
