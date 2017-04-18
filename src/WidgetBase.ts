@@ -388,7 +388,7 @@ export class WidgetBase<P extends WidgetProperties> extends Evented implements W
 		return this._cachedVNode;
 	}
 
-	public invalidate(): void {
+	protected invalidate(): void {
 		this._dirty = true;
 		this.emit({
 			type: 'invalidated',

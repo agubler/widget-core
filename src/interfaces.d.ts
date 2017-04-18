@@ -327,7 +327,7 @@ export interface PropertiesChangeRecord<P extends WidgetProperties> {
 }
 
 /**
- *
+ * WidgetBase constructor that requires the properties interface to be provieded.
  */
 export type WidgetBaseConstructor<P extends WidgetProperties> = Constructor<WidgetBaseInterface<P>>;
 
@@ -370,9 +370,4 @@ export interface WidgetBaseInterface<P extends WidgetProperties> extends Evented
 	 * Main internal function for dealing with widget rendering
 	 */
 	__render__(): VNode | string | null;
-
-	/**
-	 * invalidate the widget
-	 */
-	invalidate(): void;
 }
