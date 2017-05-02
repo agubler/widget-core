@@ -57,7 +57,7 @@ registerSuite({
 			class IntegrationTest extends TestWithRegistry {
 				render() {
 					return v('div', [
-						w('test', { id: `${Math.random()}` })
+						w('test', { key: `${Math.random()}` })
 					]);
 				}
 			}

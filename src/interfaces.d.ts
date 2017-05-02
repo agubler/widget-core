@@ -265,21 +265,21 @@ export interface HNode {
 /**
  * Wrapper for `w`
  */
-export interface WNode {
+export interface WNode<W extends WidgetBaseInterface = DefaultWidgetBaseInterface, C extends WidgetBaseInterface = DefaultWidgetBaseInterface> {
 	/**
 	 * Constructor to create a widget or string constructor label
 	 */
-	widgetConstructor: WidgetConstructor | string;
+	widgetConstructor: Constructor<W> | string;
 
 	/**
 	 * Properties to set against a widget instance
 	 */
-	properties: WidgetProperties;
+	properties: W['properties'];
 
 	/**
 	 * DNode children
 	 */
-	children: DNode[];
+	children: DNode<C>[];
 
 	/**
 	 * The type of node
@@ -290,7 +290,11 @@ export interface WNode {
 /**
  * union type for all possible return types from render
  */
-export type DNode = HNode | WNode | string | null;
+export type DNode<
+	W extends WidgetBaseInterface = DefaultWidgetBaseInterface,
+	C extends WidgetBaseInterface = DefaultWidgetBaseInterface> = HNode | WNode<W, C> | string | null;
+
+export interface DefaultWidgetBaseInterface extends WidgetBaseInterface<WidgetProperties> {}
 
 /**
  * the event emitted on properties:changed
@@ -329,17 +333,16 @@ export interface PropertiesChangeRecord<P extends WidgetProperties> {
 /**
  *
  */
-export type WidgetBaseConstructor<P extends WidgetProperties> = Constructor<WidgetBaseInterface<P>>;
-
-/**
- * WidgetBase constructor type
- */
-export type WidgetConstructor = WidgetBaseConstructor<WidgetProperties>;
+export type WidgetBaseConstructor<
+	P extends WidgetProperties = WidgetProperties,
+	C extends WidgetBaseInterface = DefaultWidgetBaseInterface> = Constructor<WidgetBaseInterface<P, C>>;
 
 /**
  * The interface for WidgetBase
  */
-export interface WidgetBaseInterface<P extends WidgetProperties> extends Evented {
+export interface WidgetBaseInterface<
+	P extends WidgetProperties = WidgetProperties,
+	C extends WidgetBaseInterface = DefaultWidgetBaseInterface> extends Evented {
 
 	/**
 	 * Widget properties
@@ -349,7 +352,7 @@ export interface WidgetBaseInterface<P extends WidgetProperties> extends Evented
 	/**
 	 * Returns the widget's children
 	 */
-	readonly children: DNode[];
+	readonly children: DNode<C>[];
 
 	/**
 	 * Sets the properties for the widget. Responsible for calling the diffing functions for the properties against the
@@ -364,7 +367,7 @@ export interface WidgetBaseInterface<P extends WidgetProperties> extends Evented
 	/**
 	 * Sets the widget's children
 	 */
-	__setChildren__(children: DNode[]): void;
+	__setChildren__(children: DNode<C>[]): void;
 
 	/**
 	 * Main internal function for dealing with widget rendering
