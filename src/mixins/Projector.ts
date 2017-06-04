@@ -3,7 +3,13 @@ import global from '@dojo/core/global';
 import { createHandle } from '@dojo/core/lang';
 import { Handle } from '@dojo/interfaces/core';
 import { VNode } from '@dojo/interfaces/vdom';
-import { h, dom, Projection, ProjectionOptions, VNodeProperties } from 'maquette';
+import {
+	h,
+	dom,
+	Projection,
+	ProjectionOptions,
+	VNodeProperties
+} from 'maquette';
 import 'pepjs';
 import cssTransitions from '../animations/cssTransitions';
 import { Constructor, DNode, WidgetProperties } from './../interfaces';
@@ -27,7 +33,6 @@ export enum AttachType {
 }
 
 export interface AttachOptions {
-
 	/**
 	 * If `'append'` it will appended to the root. If `'merge'` it will merged with the root. If `'replace'` it will
 	 * replace the root.
@@ -41,11 +46,12 @@ export interface AttachOptions {
 }
 
 export interface ProjectorMixin<P extends WidgetProperties> {
-
 	/**
 	 * Append the projector to the root.
 	 */
-	append(root?: Element): Handle;
+	append(
+		root?: Element
+	): Handle;
 
 	/**
 	 * Merge the projector onto the root.
@@ -54,12 +60,16 @@ export interface ProjectorMixin<P extends WidgetProperties> {
 	 * will be created.
 	 * @param root The root element that the root virtual DOM node will be merged with.  Defaults to `document.body`.
 	 */
-	merge(root?: Element): Handle;
+	merge(
+		root?: Element
+	): Handle;
 
 	/**
 	 * Replace the root with the projector node.
 	 */
-	replace(root?: Element): Handle;
+	replace(
+		root?: Element
+	): Handle;
 
 	/**
 	 * Pause the projector.
@@ -78,7 +88,9 @@ export interface ProjectorMixin<P extends WidgetProperties> {
 	 * The `Projector` creates a `DocumentFragment` which replaces any other `root` that has been set.
 	 * @param doc The `Document` to use, which defaults to the global `document`.
 	 */
-	sandbox(doc?: Document): Handle;
+	sandbox(
+		doc?: Document
+	): Handle;
 
 	/**
 	 * Schedule a render.
@@ -93,12 +105,16 @@ export interface ProjectorMixin<P extends WidgetProperties> {
 	 *
 	 * @param properties The new widget properties
 	 */
-	setProperties(properties: P & { [index: string]: any }): void;
+	setProperties(
+		properties: P & { [index: string]: any }
+	): void;
 
 	/**
 	 * Sets the widget's children
 	 */
-	setChildren(children: DNode[]): void;
+	setChildren(
+		children: DNode[]
+	): void;
 
 	/**
 	 * Return a `string` that represents the HTML of the current projection.  The projector needs to be attached.
@@ -155,13 +171,16 @@ const eventHandlers = [
 function setDomNodes(vnode: VNode, domNode: Element | null = null) {
 	vnode.domNode = domNode;
 	if (vnode.children && domNode) {
-		vnode.children.forEach((child, i) => setDomNodes(child, domNode.children[i]));
+		vnode.children.forEach((child, i) =>
+			setDomNodes(child, domNode.children[i])
+		);
 	}
 }
 
-export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T): T & Constructor<ProjectorMixin<P>> {
+export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(
+	Base: T
+): T & Constructor<ProjectorMixin<P>> {
 	class Projector extends Base {
-
 		public projectorState: ProjectorAttachState;
 
 		private _root: Element;
@@ -190,9 +209,11 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 			this._boundRender = this.__render__.bind(this);
 
 			this.own(this.on('widget:children', this.invalidate));
-			this.own(this.on('properties:changed', () => {
-				this.scheduleRender();
-			}));
+			this.own(
+				this.on('properties:changed', () => {
+					this.scheduleRender();
+				})
+			);
 			this.own(this.on('invalidated', this.scheduleRender));
 
 			this.root = document.body;
@@ -240,11 +261,14 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 		}
 
 		public scheduleRender() {
-			if (this.projectorState === ProjectorAttachState.Attached && !this._scheduled && !this._paused) {
+			if (
+				this.projectorState === ProjectorAttachState.Attached &&
+				!this._scheduled &&
+				!this._paused
+			) {
 				if (this._async) {
 					this._scheduled = global.requestAnimationFrame(this._boundDoRender);
-				}
-				else {
+				} else {
 					this._boundDoRender();
 				}
 			}
@@ -252,7 +276,9 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 
 		public set root(root: Element) {
 			if (this.projectorState === ProjectorAttachState.Attached) {
-				throw new Error('Projector already attached, cannot change root element');
+				throw new Error(
+					'Projector already attached, cannot change root element'
+				);
 			}
 			this._root = root;
 		}
@@ -269,9 +295,11 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 			const previousRoot = this.root;
 
 			/* free up the document fragment for GC */
-			this.own(createHandle(() => {
-				this._root = previousRoot;
-			}));
+			this.own(
+				createHandle(() => {
+					this._root = previousRoot;
+				})
+			);
 			return this.attach({
 				/* DocumentFragment is not assignable to Element, but provides everything needed to work */
 				root: doc.createDocumentFragment() as any,
@@ -280,7 +308,7 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 		}
 
 		public setChildren(children: DNode[]): void {
-			this._projectorChildren = [ ...children ];
+			this._projectorChildren = [...children];
 			super.__setChildren__(children);
 		}
 
@@ -290,8 +318,13 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 		}
 
 		public toHtml(): string {
-			if (this.projectorState !== ProjectorAttachState.Attached || !this._projection) {
-				throw new Error('Projector is not attached, cannot return an HTML string of projection.');
+			if (
+				this.projectorState !== ProjectorAttachState.Attached ||
+				!this._projection
+			) {
+				throw new Error(
+					'Projector is not attached, cannot return an HTML string of projection.'
+				);
 			}
 			return this._projection.domNode.outerHTML;
 		}
@@ -305,35 +338,41 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 			}
 			let result = super.__render__();
 
-			if (Array.isArray(result) || typeof result === 'string' || result === null) {
+			if (
+				Array.isArray(result) ||
+				typeof result === 'string' ||
+				result === null
+			) {
 				if (!this._rootTagName) {
 					this._rootTagName = 'span';
 				}
 
 				result = h(this._rootTagName, {}, result);
-			}
-			else if (!this._rootTagName) {
+			} else if (!this._rootTagName) {
 				this._rootTagName = result.vnodeSelector;
 			}
 
 			if (this._rootTagName !== result.vnodeSelector) {
 				if (this._attachType === AttachType.Merge) {
 					assign(result, { vnodeSelector: this._rootTagName });
-				}
-				else {
+				} else {
 					result = h(this._rootTagName, {}, result);
 				}
 			}
 			return result;
 		}
 
-		private eventHandlerInterceptor(propertyName: string, eventHandler: Function, domNode: Element, properties: VNodeProperties) {
+		private eventHandlerInterceptor(
+			propertyName: string,
+			eventHandler: Function,
+			domNode: Element,
+			properties: VNodeProperties
+		) {
 			if (eventHandlers.indexOf(propertyName) > -1) {
 				return function(this: Node, ...args: any[]) {
 					return eventHandler.apply(properties.bind || this, args);
 				};
-			}
-			else {
+			} else {
 				// remove "on" from event name
 				const eventName = propertyName.substr(2);
 				domNode.addEventListener(eventName, (...args: any[]) => {
@@ -369,23 +408,35 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 						this._projection = undefined;
 						this.projectorState = ProjectorAttachState.Detached;
 					}
-					this._attachHandle = { destroy() { } };
+					this._attachHandle = { destroy() {} };
 				}
 			});
 
 			switch (type) {
 				case AttachType.Append:
-					this._projection = dom.append(this.root, this._boundRender(), this._projectionOptions);
-				break;
+					this._projection = dom.append(
+						this.root,
+						this._boundRender(),
+						this._projectionOptions
+					);
+					break;
 				case AttachType.Merge:
 					this._rootTagName = this._root.tagName.toLowerCase();
 					const vnode: VNode = this._boundRender();
 					setDomNodes(vnode, this.root);
-					this._projection = dom.merge(this.root, vnode, this._projectionOptions);
-				break;
+					this._projection = dom.merge(
+						this.root,
+						vnode,
+						this._projectionOptions
+					);
+					break;
 				case AttachType.Replace:
-					this._projection = dom.replace(this.root, this._boundRender(), this._projectionOptions);
-				break;
+					this._projection = dom.replace(
+						this.root,
+						this._boundRender(),
+						this._projectionOptions
+					);
+					break;
 			}
 
 			return this._attachHandle;

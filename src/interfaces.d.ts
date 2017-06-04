@@ -1,6 +1,10 @@
 import { Evented } from '@dojo/core/Evented';
 import { EventTypedObject } from '@dojo/interfaces/core';
-import { VNode, VNodeProperties, ProjectionOptions } from '@dojo/interfaces/vdom';
+import {
+	VNode,
+	VNodeProperties,
+	ProjectionOptions
+} from '@dojo/interfaces/vdom';
 
 /**
  * Generic constructor type
@@ -52,7 +56,9 @@ export type MouseMoveEventHandler = MouseEventHandler;
 export type MouseOutEventHandler = MouseEventHandler;
 export type MouseOverEventHandler = MouseEventHandler;
 export type MouseUpEventHandler = MouseEventHandler;
-export type MouseWheelEventHandler = (event?: MouseWheelEvent | WheelEvent) => EventHandlerResult;
+export type MouseWheelEventHandler = (
+	event?: MouseWheelEvent | WheelEvent
+) => EventHandlerResult;
 export type ScrollEventHandler = (event?: UIEvent) => EventHandlerResult;
 export type SubmitEventHandler = EventHandler;
 
@@ -69,7 +75,9 @@ export interface VirtualDomProperties {
 	 * @param element - Element that was just added to the DOM.
 	 * @param properties - The properties object that was supplied to the [[h]] method
 	 */
-	enterAnimation?: ((element: Element, properties?: VNodeProperties) => void) | string;
+	enterAnimation?:
+		| ((element: Element, properties?: VNodeProperties) => void)
+		| string;
 	/**
 	 * The animation to perform when this node is removed while its parent remains.
 	 * When this value is a string, you must pass a `projectionOptions.transitions` object when creating the projector using [[createProjector]].
@@ -80,7 +88,13 @@ export interface VirtualDomProperties {
 	 * You may use this function to remove the element when the animation is done.
 	 * @param properties - The properties object that was supplied to the [[h]] method that rendered this [[VNode]] the previous time.
 	 */
-	exitAnimation?: ((element: Element, removeElement: () => void, properties?: VNodeProperties) => void) | string;
+	exitAnimation?:
+		| ((
+				element: Element,
+				removeElement: () => void,
+				properties?: VNodeProperties
+			) => void)
+		| string;
 	/**
 	 * The animation to perform when the properties of this node change.
 	 * This also includes attributes, styles, css classes. This callback is also invoked when node contains only text and that text changes.
@@ -89,7 +103,11 @@ export interface VirtualDomProperties {
 	 * @param properties - The last properties object that was supplied to the [[h]] method
 	 * @param previousProperties - The previous properties object that was supplied to the [[h]] method
 	 */
-	updateAnimation?: (element: Element, properties?: VNodeProperties, previousProperties?: VNodeProperties) => void;
+	updateAnimation?: (
+		element: Element,
+		properties?: VNodeProperties,
+		previousProperties?: VNodeProperties
+	) => void;
 	/**
 	 * Callback that is executed after this node is added to the DOM. Child nodes and properties have
 	 * already been applied.
@@ -99,8 +117,13 @@ export interface VirtualDomProperties {
 	 * @param properties - The properties passed to the [[h]] function.
 	 * @param children - The children that were created.
 	 */
-	afterCreate?(element: Element, projectionOptions: ProjectionOptions, vnodeSelector: string, properties: VNodeProperties,
-	children: VNode[]): void;
+	afterCreate?(
+		element: Element,
+		projectionOptions: ProjectionOptions,
+		vnodeSelector: string,
+		properties: VNodeProperties,
+		children: VNode[]
+	): void;
 	/**
 	 * Callback that is executed every time this node may have been updated. Child nodes and properties
 	 * have already been updated.
@@ -110,8 +133,13 @@ export interface VirtualDomProperties {
 	 * @param properties - The properties passed to the [[h]] function.
 	 * @param children - The children for this node.
 	 */
-	afterUpdate?(element: Element, projectionOptions: ProjectionOptions, vnodeSelector: string, properties: VNodeProperties,
-	children: VNode[]): void;
+	afterUpdate?(
+		element: Element,
+		projectionOptions: ProjectionOptions,
+		vnodeSelector: string,
+		properties: VNodeProperties,
+		children: VNode[]
+	): void;
 	/**
 	 * Bind should not be defined.
 	 */
@@ -126,16 +154,20 @@ export interface VirtualDomProperties {
 	 * An object literal like `{important:true}` which allows css classes, like `important` to be added and removed
 	 * dynamically. Can also take a function, that must return an object literal.
 	 */
-	readonly classes?: {
-		[index: string]: boolean | null | undefined;
-	} | ClassesFunction;
+	readonly classes?:
+		| {
+				[index: string]: boolean | null | undefined;
+			}
+		| ClassesFunction;
 	/**
 	 * An object literal like `{height:'100px'}` which allows styles to be changed dynamically. All values must be strings.
 	 */
 	readonly styles?: { [index: string]: string | null | undefined };
 
 	// Pointer Events
-	onpointermove?(ev?: PointerEvent): boolean | void;
+	onpointermove?(
+		ev?: PointerEvent
+	): boolean | void;
 	onpointerdown?(ev?: PointerEvent): boolean | void;
 	onpointerup?(ev?: PointerEvent): boolean | void;
 	onpointerover?(ev?: PointerEvent): boolean | void;
@@ -146,7 +178,9 @@ export interface VirtualDomProperties {
 	// For Pointer Event Polyfill see: https://github.com/jquery/PEP
 	readonly 'touch-action'?: string;
 	// From Element
-	ontouchcancel?(ev?: TouchEvent): boolean | void;
+	ontouchcancel?(
+		ev?: TouchEvent
+	): boolean | void;
 	ontouchend?(ev?: TouchEvent): boolean | void;
 	ontouchmove?(ev?: TouchEvent): boolean | void;
 	ontouchstart?(ev?: TouchEvent): boolean | void;
@@ -158,7 +192,9 @@ export interface VirtualDomProperties {
 	readonly name?: string;
 	readonly target?: string;
 	// From HTMLElement
-	onblur?(ev?: FocusEvent): boolean | void;
+	onblur?(
+		ev?: FocusEvent
+	): boolean | void;
 	onchange?(ev?: Event): boolean | void;
 	onclick?(ev?: MouseEvent): boolean | void;
 	ondblclick?(ev?: MouseEvent): boolean | void;
@@ -217,7 +253,6 @@ export type RegistryLabel = string | symbol;
  * Base widget properties
  */
 export interface WidgetProperties {
-
 	/**
 	 * The key for a widget. Used to differentiate uniquely identify child widgets for
 	 * rendering and instance management
@@ -232,7 +267,7 @@ export interface HNode {
 	/**
 	 * Array of processed VNode children.
 	 */
-	vNodes?: ((string | VNode | null)[] |string | VNode | null)[];
+	vNodes?: ((string | VNode | null)[] | string | VNode | null)[];
 	/**
 	 * Specified children
 	 */
@@ -241,7 +276,9 @@ export interface HNode {
 	/**
 	 * render function that wraps returns VNode
 	 */
-	render<T>(options?: { bind?: T }): VNode;
+	render<T>(
+		options?: { bind?: T }
+	): VNode;
 
 	/**
 	 * The properties used to create the VNode
@@ -262,7 +299,9 @@ export interface HNode {
 /**
  * Wrapper for `w`
  */
-export interface WNode<W extends WidgetBaseInterface = DefaultWidgetBaseInterface> {
+export interface WNode<
+	W extends WidgetBaseInterface = DefaultWidgetBaseInterface
+> {
 	/**
 	 * Constructor to create a widget or string constructor label
 	 */
@@ -287,12 +326,19 @@ export interface WNode<W extends WidgetBaseInterface = DefaultWidgetBaseInterfac
 /**
  * union type for all possible return types from render
  */
-export type DNode<W extends WidgetBaseInterface = DefaultWidgetBaseInterface> = HNode | WNode<W> | string | null;
+export type DNode<W extends WidgetBaseInterface = DefaultWidgetBaseInterface> =
+	| HNode
+	| WNode<W>
+	| string
+	| null;
 
 /**
  * the event emitted on properties:changed
  */
-export interface PropertiesChangeEvent<T, P extends WidgetProperties> extends EventTypedObject<'properties:changed'> {
+export interface PropertiesChangeEvent<
+	T,
+	P extends WidgetProperties
+> extends EventTypedObject<'properties:changed'> {
 	/**
 	 * the full set of properties
 	 */
@@ -328,17 +374,21 @@ export interface PropertiesChangeRecord<P extends WidgetProperties> {
  */
 export type WidgetBaseConstructor<
 	P extends WidgetProperties = WidgetProperties,
-	C extends DNode = DNode> = Constructor<WidgetBaseInterface<P, C>>;
+	C extends DNode = DNode
+> = Constructor<WidgetBaseInterface<P, C>>;
 
-export interface DefaultWidgetBaseInterface extends WidgetBaseInterface<WidgetProperties, DNode<DefaultWidgetBaseInterface>> {}
+export interface DefaultWidgetBaseInterface extends WidgetBaseInterface<
+	WidgetProperties,
+	DNode<DefaultWidgetBaseInterface>
+> {}
 
 /**
  * The interface for WidgetBase
  */
 export interface WidgetBaseInterface<
 	P extends WidgetProperties = WidgetProperties,
-	C extends DNode = DNode<DefaultWidgetBaseInterface>> extends Evented {
-
+	C extends DNode = DNode<DefaultWidgetBaseInterface>
+> extends Evented {
 	/**
 	 * Widget properties
 	 */
@@ -357,12 +407,16 @@ export interface WidgetBaseInterface<
 	 *
 	 * @param properties The new widget properties
 	 */
-	__setProperties__(properties: P & { [index: string]: any }): void;
+	__setProperties__(
+		properties: P & { [index: string]: any }
+	): void;
 
 	/**
 	 * Sets the widget's children
 	 */
-	__setChildren__(children: (C | null)[]): void;
+	__setChildren__(
+		children: (C | null)[]
+	): void;
 
 	/**
 	 * Main internal function for dealing with widget rendering

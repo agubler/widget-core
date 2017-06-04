@@ -1,4 +1,8 @@
-import { initializeElement, CustomElementDescriptor, handleAttributeChanged } from './customElements';
+import {
+	initializeElement,
+	CustomElementDescriptor,
+	handleAttributeChanged
+} from './customElements';
 import { Constructor, WidgetProperties } from './interfaces';
 import { WidgetBase } from './WidgetBase';
 
@@ -20,51 +24,61 @@ export interface CustomElementDescriptorFactory {
  *
  * @param descriptorFactory
  */
-export function registerCustomElement(descriptorFactory: CustomElementDescriptorFactory) {
+export function registerCustomElement(
+	descriptorFactory: CustomElementDescriptorFactory
+) {
 	const descriptor = descriptorFactory();
 
-	customElements.define(descriptor.tagName, class extends HTMLElement {
-		private _isAppended = false;
-		private _appender: Function;
-		private _widgetInstance: WidgetBase;
+	customElements.define(
+		descriptor.tagName,
+		class extends HTMLElement {
+			private _isAppended = false;
+			private _appender: Function;
+			private _widgetInstance: WidgetBase;
 
-		constructor() {
-			super();
+			constructor() {
+				super();
 
-			this._appender = initializeElement(this);
-		}
+				this._appender = initializeElement(this);
+			}
 
-		connectedCallback() {
-			if (!this._isAppended) {
-				this._appender();
-				this._isAppended = true;
+			connectedCallback() {
+				if (!this._isAppended) {
+					this._appender();
+					this._isAppended = true;
+				}
+			}
+
+			attributeChangedCallback(
+				name: string,
+				oldValue: string | null,
+				newValue: string | null
+			) {
+				handleAttributeChanged(this, name, newValue, oldValue);
+			}
+
+			getWidgetInstance(): WidgetBase<any> {
+				return this._widgetInstance;
+			}
+
+			setWidgetInstance(widget: WidgetBase<any>): void {
+				this._widgetInstance = widget;
+			}
+
+			getWidgetConstructor(): Constructor<WidgetBase<WidgetProperties>> {
+				return this.getDescriptor().widgetConstructor;
+			}
+
+			getDescriptor(): CustomElementDescriptor {
+				return descriptor;
+			}
+
+			static get observedAttributes(): string[] {
+				return (descriptor.attributes || [])
+					.map(attribute => attribute.attributeName);
 			}
 		}
-
-		attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
-			handleAttributeChanged(this, name, newValue, oldValue);
-		}
-
-		getWidgetInstance(): WidgetBase<any> {
-			return this._widgetInstance;
-		}
-
-		setWidgetInstance(widget: WidgetBase<any>): void {
-			this._widgetInstance = widget;
-		}
-
-		getWidgetConstructor(): Constructor<WidgetBase<WidgetProperties>> {
-			return this.getDescriptor().widgetConstructor;
-		}
-
-		getDescriptor(): CustomElementDescriptor {
-			return descriptor;
-		}
-
-		static get observedAttributes(): string[] {
-			return (descriptor.attributes || []).map(attribute => attribute.attributeName);
-		}
-	});
+	);
 }
 
 export default registerCustomElement;

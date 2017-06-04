@@ -3,7 +3,7 @@ import { WidgetBaseConstructor, RegistryLabel } from './interfaces';
 import WidgetRegistry, { WidgetRegistryEventObject } from './WidgetRegistry';
 
 export default class RegistryHandler extends Evented {
-	private _registries: { handle?: any, registry: WidgetRegistry }[] = [];
+	private _registries: { handle?: any; registry: WidgetRegistry }[] = [];
 
 	add(registry: WidgetRegistry) {
 		this._registries.unshift({ registry });
@@ -32,7 +32,7 @@ export default class RegistryHandler extends Evented {
 	}
 
 	has(widgetLabel: RegistryLabel): boolean {
-		return this._registries.some((registryWrapper) => {
+		return this._registries.some(registryWrapper => {
 			return registryWrapper.registry.has(widgetLabel);
 		});
 	}
@@ -43,15 +43,17 @@ export default class RegistryHandler extends Evented {
 			const item = registryWrapper.registry.get(widgetLabel);
 			if (item) {
 				return item;
-			}
-			else if (!registryWrapper.handle) {
-				registryWrapper.handle = registryWrapper.registry.on(widgetLabel, (event: WidgetRegistryEventObject) => {
-					if (event.action === 'loaded') {
-						this.emit({ type: 'invalidate' });
-						registryWrapper.handle.destroy();
-						registryWrapper.handle = undefined;
+			} else if (!registryWrapper.handle) {
+				registryWrapper.handle = registryWrapper.registry.on(
+					widgetLabel,
+					(event: WidgetRegistryEventObject) => {
+						if (event.action === 'loaded') {
+							this.emit({ type: 'invalidate' });
+							registryWrapper.handle.destroy();
+							registryWrapper.handle = undefined;
+						}
 					}
-				});
+				);
 			}
 		}
 		return null;

@@ -10,7 +10,10 @@ export const enum DiffType {
 }
 
 function isObjectOrArray(value: any): boolean {
-	return Object.prototype.toString.call(value) === '[object Object]' || Array.isArray(value);
+	return (
+		Object.prototype.toString.call(value) === '[object Object]' ||
+		Array.isArray(value)
+	);
 }
 
 function always(previousProperty: any, newProperty: any): PropertyChangeRecord {
@@ -27,7 +30,11 @@ function ignore(previousProperty: any, newProperty: any): PropertyChangeRecord {
 	};
 }
 
-function custom(previousProperty: any, newProperty: any, meta: any): PropertyChangeRecord {
+function custom(
+	previousProperty: any,
+	newProperty: any,
+	meta: any
+): PropertyChangeRecord {
 	const { diffFunction, scope } = meta;
 	if (!diffFunction) {
 		return {
@@ -38,17 +45,24 @@ function custom(previousProperty: any, newProperty: any, meta: any): PropertyCha
 	return diffFunction.call(scope, previousProperty, newProperty);
 }
 
-function reference(previousProperty: any, newProperty: any): PropertyChangeRecord {
+function reference(
+	previousProperty: any,
+	newProperty: any
+): PropertyChangeRecord {
 	return {
 		changed: previousProperty !== newProperty,
 		value: newProperty
 	};
 }
 
-function shallow(previousProperty: any, newProperty: any): PropertyChangeRecord {
+function shallow(
+	previousProperty: any,
+	newProperty: any
+): PropertyChangeRecord {
 	let changed = false;
 
-	const validOldProperty = previousProperty && isObjectOrArray(previousProperty);
+	const validOldProperty =
+		previousProperty && isObjectOrArray(previousProperty);
 	const validNewProperty = newProperty && isObjectOrArray(newProperty);
 
 	if (!validOldProperty || !validNewProperty) {
@@ -63,9 +77,8 @@ function shallow(previousProperty: any, newProperty: any): PropertyChangeRecord 
 
 	if (previousKeys.length !== newKeys.length) {
 		changed = true;
-	}
-	else {
-		changed = newKeys.some((key) => {
+	} else {
+		changed = newKeys.some(key => {
 			return newProperty[key] !== previousProperty[key];
 		});
 	}
@@ -75,37 +88,43 @@ function shallow(previousProperty: any, newProperty: any): PropertyChangeRecord 
 	};
 }
 
-export default function diff(propertyName: string, diffDiffType: DiffType, previousProperty: any, newProperty: any, meta?: any) {
+export default function diff(
+	propertyName: string,
+	diffDiffType: DiffType,
+	previousProperty: any,
+	newProperty: any,
+	meta?: any
+) {
 	let result;
 	switch (diffDiffType) {
 		case DiffType.CUSTOM:
 			result = custom(previousProperty, newProperty, meta);
-		break;
+			break;
 		case DiffType.ALWAYS:
 			result = always(previousProperty, newProperty);
-		break;
+			break;
 		case DiffType.IGNORE:
 			result = ignore(previousProperty, newProperty);
-		break;
+			break;
 		case DiffType.REFERENCE:
 			result = reference(previousProperty, newProperty);
-		break;
+			break;
 		case DiffType.SHALLOW:
 			result = shallow(previousProperty, newProperty);
-		break;
+			break;
 		case DiffType.AUTO:
 			if (typeof newProperty === 'function') {
 				result = ignore(previousProperty, newProperty);
-			}
-			else if (isObjectOrArray(newProperty)) {
+			} else if (isObjectOrArray(newProperty)) {
 				result = shallow(previousProperty, newProperty);
-			}
-			else {
+			} else {
 				result = reference(previousProperty, newProperty);
 			}
-		break;
+			break;
 		default:
-			console.warn(`no valid DiffType provided, will mark property '${propertyName}' as changed`);
+			console.warn(
+				`no valid DiffType provided, will mark property '${propertyName}' as changed`
+			);
 			result = always(previousProperty, newProperty);
 	}
 	return result;

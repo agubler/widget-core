@@ -1,13 +1,15 @@
 import { assign } from '@dojo/core/lang';
 import { Evented } from '@dojo/core/Evented';
-import { diffProperty, afterRender, WidgetBase, InternalWNode, InternalHNode } from './WidgetBase';
+import {
+	diffProperty,
+	afterRender,
+	WidgetBase,
+	InternalWNode,
+	InternalHNode
+} from './WidgetBase';
 import { decorate, isHNode, isWNode } from './d';
 import { DiffType } from './diff';
-import {
-	Constructor,
-	DNode,
-	WidgetProperties
-} from './interfaces';
+import { Constructor, DNode, WidgetProperties } from './interfaces';
 
 export interface GetProperties {
 	<C, P extends WidgetProperties>(inject: C, properties: P): any;
@@ -42,10 +44,9 @@ export const defaultMappers: Mappers = {
  * returns the context using `.get()`.
  */
 export class Context<T = any> extends Evented {
-
 	private _context: T;
 
-	constructor(context: T = <T> {}) {
+	constructor(context: T = <T>{}) {
 		super({});
 		this._context = context;
 	}
@@ -69,9 +70,10 @@ export interface InjectorProperties extends WidgetProperties {
 	children: DNode[];
 }
 
-export class BaseInjector<C extends Evented = Context> extends WidgetBase<InjectorProperties> {
-
-	protected context: C = <C> {};
+export class BaseInjector<C extends Evented = Context> extends WidgetBase<
+	InjectorProperties
+> {
+	protected context: C = <C>{};
 
 	constructor(context?: C) {
 		super();
@@ -90,11 +92,12 @@ export class BaseInjector<C extends Evented = Context> extends WidgetBase<Inject
  * Mixin that extends the supplied Injector class with the proxy `render` and passing the provided to `context` to the Injector
  * class via the constructor.
  */
-export function Injector<C extends Evented, T extends Constructor<BaseInjector<C>>>(Base: T, context: C): T {
-
+export function Injector<
+	C extends Evented,
+	T extends Constructor<BaseInjector<C>>
+>(Base: T, context: C): T {
 	@diffProperty('render', DiffType.ALWAYS)
 	class Injector extends Base {
-
 		constructor(...args: any[]) {
 			super(context);
 		}
@@ -102,10 +105,16 @@ export function Injector<C extends Evented, T extends Constructor<BaseInjector<C
 		@afterRender()
 		protected decoratateBind(node: DNode) {
 			const { scope } = this.properties;
-			decorate(node, (node: InternalHNode | InternalWNode) => {
-				const { properties } = node;
-				properties.bind = scope;
-			}, (node: DNode) => { return isHNode(node) || isWNode(node); });
+			decorate(
+				node,
+				(node: InternalHNode | InternalWNode) => {
+					const { properties } = node;
+					properties.bind = scope;
+				},
+				(node: DNode) => {
+					return isHNode(node) || isWNode(node);
+				}
+			);
 
 			return node;
 		}

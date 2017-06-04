@@ -13,7 +13,6 @@ export interface State {
  * Stateful interface
  */
 export interface StatefulMixin {
-
 	/**
 	 * state property
 	 */
@@ -25,7 +24,9 @@ export interface StatefulMixin {
 	 *
 	 * @param state state to mix over the stored state
 	 */
-	setState(state: Partial<State>): void;
+	setState(
+		state: Partial<State>
+	): void;
 }
 
 /**
@@ -33,17 +34,20 @@ export interface StatefulMixin {
  */
 const stateChangedEventType = 'state:changed';
 
-export function StatefulMixin<T extends Constructor<WidgetBase<any>>>(base: T): T & Constructor<StatefulMixin> {
+export function StatefulMixin<T extends Constructor<WidgetBase<any>>>(
+	base: T
+): T & Constructor<StatefulMixin> {
 	return class extends base {
-
 		private _state: State;
 
 		constructor(...args: any[]) {
 			super(...args);
 			this._state = Object.create(null);
-			this.own(this.on('state:changed', () => {
-				this.invalidate();
-			}));
+			this.own(
+				this.on('state:changed', () => {
+					this.invalidate();
+				})
+			);
 		}
 
 		public get state(): State {
