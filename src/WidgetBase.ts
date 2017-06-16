@@ -344,22 +344,13 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 
 	public __setProperties__(originalProperties: P): void {
 		const { bind, ...properties } = originalProperties as any;
-		const registeredDiffPropertyConfigs: DiffPropertyConfig[] = this.getDecorator('diffProperty');
 		const allProperties = arrayFrom(new Set([...Object.keys(this.properties), ...Object.keys(properties)]));
 
 		this._renderState = WidgetRenderState.PROPERTIES;
 		this.bindFunctionProperties(properties, bind);
 
 		if (this._mappedDiffPropertyFunctions === undefined) {
-			this._mappedDiffPropertyFunctions = registeredDiffPropertyConfigs.reduce((diffFunctions: { [key: string]: DiffPropertyConfig[] }, config: DiffPropertyConfig) => {
-				const { propertyName } = config;
-				if (diffFunctions[propertyName]) {
-					diffFunctions[propertyName].push(config);
-					return diffFunctions;
-				}
-				diffFunctions[propertyName] = [ config ];
-				return diffFunctions;
-			}, {});
+			this._mapDiffPropertyFunctions();
 		}
 
 		let changed = false;
@@ -546,6 +537,19 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 		this._decoratorCache.set(decoratorKey, allDecorators);
 
 		return allDecorators;
+	}
+
+	private _mapDiffPropertyFunctions() {
+		const registeredDiffPropertyConfigs: DiffPropertyConfig[] = this.getDecorator('diffProperty');
+		this._mappedDiffPropertyFunctions = registeredDiffPropertyConfigs.reduce((diffFunctions: { [key: string]: DiffPropertyConfig[] }, config: DiffPropertyConfig) => {
+			const { propertyName } = config;
+			if (diffFunctions[propertyName]) {
+				diffFunctions[propertyName].push(config);
+				return diffFunctions;
+			}
+			diffFunctions[propertyName] = [ config ];
+			return diffFunctions;
+		}, {});
 	}
 
 	/**
