@@ -396,7 +396,7 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 				}
 
 				const previousValue = this._properties[propertyName];
-				const newValue = (<any> properties)[propertyName];
+				const newValue = properties[propertyName];
 				const result = diff(propertyName, DiffType.AUTO, previousValue, newValue);
 				if (result.changed) {
 					changed = true;
