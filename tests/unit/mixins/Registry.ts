@@ -8,19 +8,8 @@ import WidgetRegistry from '../../../src/WidgetRegistry';
 import { spy } from 'sinon';
 
 class TestWithRegistry extends RegistryMixin(WidgetBase)<RegistryMixinProperties> {
-	private _changedKeys: string[];
 	constructor() {
 		super();
-		this.on('properties:changed', (evt) => {
-			this._changedKeys = evt.changedPropertyKeys;
-		});
-	}
-	__setProperties__(properties: any) {
-		this._changedKeys = [];
-		super.__setProperties__(properties);
-	}
-	getChangedKeys() {
-		return this._changedKeys;
 	}
 	getRegistries() {
 		return this.registries;
@@ -36,12 +25,10 @@ registerSuite({
 			const add = spy(widget.getRegistries(), 'add');
 			widget.__setProperties__({ registry });
 			assert.isTrue(add.calledWith(registry));
-			assert.deepEqual(widget.getChangedKeys(), [ 'registry' ]);
 		},
 		'replaces registry and marks as changed when different to previous registry'() {
 			const widget = new TestWithRegistry();
 			const registry = new WidgetRegistry();
-
 			widget.__setProperties__({ registry });
 
 			const replace = spy(widget.getRegistries(), 'replace');
@@ -49,7 +36,6 @@ registerSuite({
 
 			widget.__setProperties__({ registry: newRegistry });
 			assert.isTrue(replace.calledWith(registry, newRegistry));
-			assert.deepEqual(widget.getChangedKeys(), [ 'registry' ]);
 		}
 	},
 	integration: {

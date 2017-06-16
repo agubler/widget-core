@@ -1,11 +1,12 @@
 import { assign } from '@dojo/core/lang';
-import { includes, find } from '@dojo/shim/array';
+import { find } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
-import { Constructor, DNode, WidgetProperties, PropertiesChangeEvent } from './../interfaces';
+import { Constructor, DNode, WidgetProperties } from './../interfaces';
 import { w, registry } from './../d';
 import { WidgetRegistry } from './../WidgetRegistry';
 import { BaseInjector, Context, Injector } from './../Injector';
-import { beforeRender, WidgetBase, onPropertiesChanged, handleDecorator } from './../WidgetBase';
+import { beforeRender, diffProperty, WidgetBase, handleDecorator } from './../WidgetBase';
+import diff, { DiffType } from './../diff';
 
 /**
  * A representation of the css class names to be applied and
@@ -277,18 +278,35 @@ export function ThemeableMixin<T extends Constructor<WidgetBase<any>>>(base: T):
 		}
 
 		/**
-		 * Function fired when properties are changed on the widget.
+		 * Diff for `theme`.
 		 *
-		 * @param changedPropertyKeys Array of properties that have changed
+		 * @param previousProperty the previous theme property
+		 * @param newProperty the new theme property
 		 */
-		@onPropertiesChanged()
-		protected onPropertiesChanged({ changedPropertyKeys }: PropertiesChangeEvent<this, ThemeableProperties>) {
-			const themeChanged = includes(changedPropertyKeys, 'theme');
-			const extraClassesChanged = includes(changedPropertyKeys, 'extraClasses');
+		@diffProperty('theme')
+		protected diffThemeProperty(previousProperty: any, newProperty: any) {
+			const result = diff('theme', DiffType.SHALLOW, previousProperty, newProperty);
 
-			if (themeChanged || extraClassesChanged) {
+			if (result.changed) {
 				this._recalculateClasses = true;
 			}
+			return result;
+		}
+
+		/**
+		 * Diff for `extraClasses`.
+		 *
+		 * @param previousProperty the previous extraClasses property
+		 * @param newProperty the new extraClasses property
+		 */
+		@diffProperty('extraClasses')
+		protected diffExtraClasssesProperty(previousProperty: any, newProperty: any) {
+			const result = diff('extraClasses', DiffType.SHALLOW, previousProperty, newProperty);
+
+			if (result.changed) {
+				this._recalculateClasses = true;
+			}
+			return result;
 		}
 
 		/**

@@ -10,8 +10,7 @@ import {
 	diffProperty,
 	DiffType,
 	afterRender,
-	beforeRender,
-	onPropertiesChanged
+	beforeRender
 } from '../../src/WidgetBase';
 import WidgetRegistry, { WIDGET_BASE_TYPE } from './../../src/WidgetRegistry';
 
@@ -149,49 +148,6 @@ registerSuite({
 			const widget = new WidgetBase();
 			const renderedWidget = <VNode> (<any> widget).__render__();
 			assert.deepEqual(renderedWidget.vnodeSelector, 'div');
-	},
-	diffProperties: {
-		'no updated properties'() {
-			const widgetBase = new TestWidget();
-			widgetBase.__setProperties__({ id: 'id', foo: 'bar' });
-
-			widgetBase.on('properties:changed', result => {
-				assert.lengthOf(result.changedPropertyKeys, 0);
-			});
-
-			widgetBase.__setProperties__({ id: 'id', foo: 'bar' });
-		},
-		'updated properties'() {
-			const widgetBase = new TestWidget();
-			widgetBase.__setProperties__({ id: 'id', foo: 'bar' });
-
-			widgetBase.on('properties:changed', result => {
-				assert.lengthOf(result.changedPropertyKeys, 1);
-			});
-
-			widgetBase.__setProperties__({ id: 'id', foo: 'baz' });
-		},
-		'new properties'() {
-			const widgetBase = new TestWidget();
-			widgetBase.__setProperties__({ id: 'id', foo: 'bar' });
-
-			widgetBase.on('properties:changed', result => {
-				assert.lengthOf(result.changedPropertyKeys, 1);
-			});
-
-			widgetBase.__setProperties__({ id: 'id', foo: 'bar', bar: 'baz' });
-		},
-		'updated / new properties with falsy values'() {
-			const widgetBase = new TestWidget();
-			widgetBase.__setProperties__({ id: 'id', foo: 'bar' });
-
-			widgetBase.on('properties:changed', result => {
-				assert.lengthOf(result.changedPropertyKeys, 4);
-				assert.deepEqual(result.changedPropertyKeys, ['foo', 'bar', 'baz', 'qux']);
-			});
-
-			widgetBase.__setProperties__({ id: 'id', foo: '', bar: null, baz: 0, qux: false });
-		}
 	},
 	diffProperty: {
 		'decorator at class level'() {
@@ -336,12 +292,11 @@ registerSuite({
 
 			const widget = new TestWidget();
 			widget.on('properties:changed', result => {
-				assert.deepEqual(result.changedPropertyKeys, ['anotherProp']);
+				assert.fail('property should not be considered changed');
 			});
 
 			widget.__setProperties__({
-				prop: true,
-				anotherProp: true
+				prop: true
 			});
 		},
 
@@ -364,36 +319,6 @@ registerSuite({
 		}
 	},
 	setProperties: {
-		'result from diff property override diff and assign'() {
-			class TestWidget extends WidgetBase<any> {
-
-				@diffProperty('foo')
-				diffPropertyFoo(this: any, previousProperty: any, newProperty: any): any {
-					return {
-						changed: true,
-						value: newProperty
-					};
-				}
-
-				@diffProperty('baz')
-				diffPropertyBaz(this: any, previousProperty: any, newProperty: any): any {
-					return {
-						changed: false,
-						value: newProperty
-					};
-				}
-			}
-
-			const widget = new TestWidget();
-			widget.__setProperties__({ foo: 'bar', baz: 'qux' });
-
-			widget.on('properties:changed', (event: any) => {
-				assert.include(event.changedPropertyKeys, 'foo');
-				assert.notInclude(event.changedPropertyKeys, 'baz');
-			});
-
-			widget.__setProperties__({ foo: 'bar', baz: 'bar' });
-		},
 		'widgets function properties are bound to the parent by default'() {
 			class TestChildWidget extends WidgetBase<any> {
 				render() {
@@ -667,101 +592,6 @@ registerSuite({
 			const widget = new TestWidget();
 			widget.__render__();
 			assert.strictEqual(afterRenderCount, 1);
-		}
-	},
-	'properties:changed event': {
-		decorator() {
-			let onPropertiesChangedCount = 1;
-			class TestWidget extends WidgetBase<any> {
-				@onPropertiesChanged()
-				firstOnPropertiesChanged() {
-					assert.strictEqual(onPropertiesChangedCount++, 1);
-				}
-
-				@onPropertiesChanged()
-				secondOnPropertiesChanged() {
-					assert.strictEqual(onPropertiesChangedCount++, 2);
-				}
-			}
-
-			class ExtendedTestWidget extends TestWidget {
-				@onPropertiesChanged()
-				thirdOnPropertiesChanged() {
-					assert.strictEqual(onPropertiesChangedCount, 3);
-				}
-			}
-
-			const widget = new ExtendedTestWidget();
-			widget.emit({ type: 'properties:changed' });
-			assert.strictEqual(onPropertiesChangedCount, 3);
-		},
-		'non decorator'() {
-
-			let onPropertiesChangedCount = 1;
-			class TestWidget extends WidgetBase<any> {
-				constructor() {
-					super();
-					onPropertiesChanged(this.firstOnPropertiesChanged)(this);
-					onPropertiesChanged(this.secondOnPropertiesChanged)(this);
-				}
-				firstOnPropertiesChanged() {
-					assert.strictEqual(onPropertiesChangedCount++, 1);
-				}
-				secondOnPropertiesChanged() {
-					assert.strictEqual(onPropertiesChangedCount++, 2);
-				}
-			}
-
-			class ExtendedTestWidget extends TestWidget {
-				constructor() {
-					super();
-					onPropertiesChanged(this.thirdOnPropertiesChanged)(this);
-				}
-				thirdOnPropertiesChanged() {
-					assert.strictEqual(onPropertiesChangedCount, 3);
-				}
-			}
-
-			const widget = new ExtendedTestWidget();
-			widget.emit({ type: 'properties:changed' });
-			assert.strictEqual(onPropertiesChangedCount, 3);
-		},
-
-		'class level decorator'() {
-			let called = 0;
-
-			@onPropertiesChanged(function () {
-				called++;
-			})
-			class TestWidget extends WidgetBase<any> {
-			}
-
-			const widget = new TestWidget();
-			widget.__setProperties__({
-				test: true
-			});
-			assert.strictEqual(called, 1);
-		},
-
-		'extendable'() {
-			let called = false;
-
-function PropertyLogger() {
-	return onPropertiesChanged(function() {
-		called = true;
-	});
-}
-
-@PropertyLogger()
-class TestWidget extends WidgetBase<any> {
-}
-
-const widget = new TestWidget();
-widget.__setProperties__({
-	test: true
-});
-
-			assert.strictEqual(called, true);
 		}
 	},
 	render: {
