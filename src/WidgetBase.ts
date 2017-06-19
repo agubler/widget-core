@@ -1,3 +1,4 @@
+import { from as arrayFrom } from '@dojo/shim/array';
 import { BaseEventedEvents, Evented } from '@dojo/core/Evented';
 import { EventedListenerOrArray } from '@dojo/interfaces/bases';
 import { Handle } from '@dojo/interfaces/core';
@@ -7,7 +8,7 @@ import Promise from '@dojo/shim/Promise';
 import Set from '@dojo/shim/Set';
 import WeakMap from '@dojo/shim/WeakMap';
 import { decorate, isHNode, isWNode, registry, v } from './d';
-import diff, { DiffType } from './diff';
+import { auto, DiffFunction, diffFunctionsArray, reference } from './diff';
 import {
 	AfterRender,
 	BeforeRender,
@@ -27,8 +28,6 @@ import {
 import MetaBase from './meta/Base';
 import RegistryHandler from './RegistryHandler';
 import { isWidgetBaseConstructor, WIDGET_BASE_TYPE } from './WidgetRegistry';
-
-export { DiffType };
 
 /**
  * Widget cache wrapper for instance management
@@ -56,13 +55,17 @@ enum WidgetRenderState {
 	RENDER
 }
 
+interface PropertyChangeReaction {
+	(previousProperties: any, properties: any): void;
+}
+
 /**
  * Diff property configuration
  */
 interface DiffPropertyConfig {
 	propertyName: string;
-	diffType: DiffType;
-	diffFunction?<P>(previousProperty: P, newProperty: P): PropertyChangeRecord;
+	diffFunction: DiffFunction;
+	reaction: PropertyChangeReaction;
 }
 
 export interface WidgetBaseEvents<P extends WidgetProperties> extends BaseEventedEvents {
@@ -100,24 +103,13 @@ export function beforeRender(method?: Function) {
  * @param diffType      The diff type, default is DiffType.AUTO.
  * @param diffFunction  A diff function to run if diffType if DiffType.CUSTOM
  */
-export function diffProperty(propertyName: string, diffType = DiffType.AUTO, diffFunction?: Function) {
+export function diffProperty(propertyName: string, diffFunction: (previousProperty: any, newProperty: any) => PropertyChangeRecord = auto) {
 	return handleDecorator((target, propertyKey) => {
 		target.addDecorator('diffProperty', {
 			propertyName,
-			diffType: propertyKey ? DiffType.CUSTOM : diffType,
-			diffFunction: propertyKey ? target[propertyKey] : diffFunction
+			diffFunction,
+			reaction: propertyKey ? target[propertyKey] : undefined
 		});
-	});
-}
-
-/**
- * Decorator used to register listeners to the `properties:changed` event.
- */
-export function onPropertiesChanged(method: Function): (target: any) => void;
-export function onPropertiesChanged(): (target: any, propertyKey: any) => void;
-export function onPropertiesChanged(method?: Function) {
-	return handleDecorator((target, propertyKey) => {
-		target.addDecorator('onPropertiesChanged', propertyKey ? target[propertyKey] : method);
 	});
 }
 
@@ -148,7 +140,7 @@ function isHNodeWithKey(node: DNode): node is HNode {
 /**
  * Main widget base for all widgets to extend
  */
-@diffProperty('bind', DiffType.REFERENCE)
+@diffProperty('bind', reference)
 export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends DNode = DNode> extends Evented implements WidgetBaseInterface<P, C> {
 
 	/**
@@ -179,12 +171,7 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 	/**
 	 * internal widget properties
 	 */
-	private  _properties: P;
-
-	/**
-	 * properties from the previous render
-	 */
-	private _previousProperties: P & { [index: string]: any };
+	private _properties: P & { [index: string]: any };
 
 	/**
 	 * cached chldren map for instance management
@@ -221,6 +208,14 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 
 	private _requiredNodes = new Set<string>();
 
+	private _customDiffPropertyFunctions: {[key: string]: DiffFunction[]} = {};
+
+	private _defaultDiffPropertyFunctions: {[key: string]: DiffFunction[]} = {};
+
+	private _diffPropertyReactionFunctionMap = new Map<PropertyChangeReaction, DiffPropertyConfig[]>();
+
+	private _hasMappedDiffFunctions = false;
+
 	/**
 	 * @constructor
 	 */
@@ -230,7 +225,6 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 		this._children = [];
 		this._decoratorCache = new Map<string, any[]>();
 		this._properties = <P> {};
-		this._previousProperties = <P> {};
 		this._cachedChildrenMap = new Map<string | Promise<WidgetBaseConstructor> | WidgetBaseConstructor, WidgetCacheWrapper[]>();
 		this._diffPropertyFunctionMap = new Map<string, string>();
 		this._renderDecorators = new Set<string>();
@@ -238,18 +232,7 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 		this._registries = new RegistryHandler();
 		this._registries.add(registry);
 		this.own(this._registries);
-
 		this.own(this._registries.on('invalidate', this.invalidate.bind(this)));
-
-		this.own(this.on('properties:changed', (evt) => {
-			this._dirty = true;
-
-			const propertiesChangedListeners = this.getDecorator('onPropertiesChanged');
-			propertiesChangedListeners.forEach((propertiesChangedFunction) => {
-				propertiesChangedFunction.call(this, evt);
-			});
-		}));
-
 		this._checkOnElementUsage();
 	}
 
@@ -382,77 +365,95 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 
 	public __setProperties__(originalProperties: P): void {
 		const { bind, ...properties } = <any> originalProperties;
-		this._renderState = WidgetRenderState.PROPERTIES;
-		const diffPropertyResults: { [index: string]: any } = {};
-		const diffPropertyChangedKeys: string[] = [];
+		const triggeredReactions: { reaction: PropertyChangeReaction, previousProperties: any, properties: any }[] = [];
+		const allProperties = arrayFrom(new Set([...Object.keys(this.properties), ...Object.keys(properties)]));
+		const diffPropertyValues: any = {};
+		let changed = false;
 
+		this._renderState = WidgetRenderState.PROPERTIES;
 		this._bindFunctionProperties(properties, bind);
 
-		const registeredDiffPropertyConfigs: DiffPropertyConfig[] = this.getDecorator('diffProperty');
+		if (!this._hasMappedDiffFunctions) {
+			this._mapDiffPropertyFunctions();
+		}
 
-		const allProperties = [...Object.keys(this._previousProperties), ...Object.keys(properties)].filter((value, index, self) => {
-			return self.indexOf(value) === index;
+		Array.from(this._diffPropertyReactionFunctionMap.entries()).forEach(([reaction, configs]) => {
+			const reactionProperties: any = {};
+			const reactionPreviousProperties: any = {};
+			let triggerReaction = false;
+			configs.forEach((config) => {
+				const previousProperty = this._properties[config.propertyName];
+				const newProperty = properties[config.propertyName];
+				const result = config.diffFunction(previousProperty, newProperty);
+				reactionProperties[config.propertyName] = result.value;
+				reactionPreviousProperties[config.propertyName] = previousProperty;
+				diffPropertyValues[config.propertyName] = result.value;
+
+				if (result.changed) {
+					changed = true;
+					triggerReaction = true;
+				}
+			});
+			if (triggerReaction) {
+				triggeredReactions.push({
+					reaction: reaction.bind(this),
+					previousProperties: reactionPreviousProperties,
+					properties: reactionProperties});
+			}
 		});
 
-		const propertyDiffHandlers = allProperties.reduce((diffFunctions: any, propertyName) => {
-			diffFunctions[propertyName] = [
-				...registeredDiffPropertyConfigs.filter(value => {
-					return value.propertyName === propertyName;
-				})
-			];
-
-			return diffFunctions;
-		}, {});
-
-		allProperties.forEach(propertyName => {
-			const previousValue = this._previousProperties[propertyName];
-			const newValue = (<any> properties)[propertyName];
-			const diffHandlers = propertyDiffHandlers[propertyName];
-			let result: PropertyChangeRecord = {
-				changed: false,
-				value: newValue
-			};
-
-			if (diffHandlers.length) {
+		Object.keys(this._customDiffPropertyFunctions).forEach((propertyName) => {
+			if (allProperties.indexOf(propertyName) !== -1) {
+			const previousValue = this._properties[propertyName];
+				const newValue = properties[propertyName];
+				const diffHandlers = this._customDiffPropertyFunctions[propertyName];
 				for (let i = 0; i < diffHandlers.length; i++) {
-					const { diffFunction, diffType } = diffHandlers[i];
-
-					const meta = {
-						diffFunction: diffFunction,
-						scope: this
-					};
-
-					result = diff(propertyName, diffType, previousValue, newValue, meta);
+					const result = diffHandlers[i](previousValue, newValue);
+					diffPropertyValues[propertyName] = result.value;
 
 					if (result.changed) {
-						break;
+						changed = true;
 					}
 				}
 			}
-			else {
-				result = diff(propertyName, DiffType.AUTO, previousValue, newValue);
-			}
-
-			if (propertyName in properties) {
-				diffPropertyResults[propertyName] = result.value;
-			}
-
-			if (result.changed) {
-				diffPropertyChangedKeys.push(propertyName);
-			}
 		});
 
-		this._properties = <P> diffPropertyResults;
+		if (!changed) {
+			for (let i = 0; i < allProperties.length; i++) {
+				const propertyName = allProperties[i];
+				if (this._customDiffPropertyFunctions[propertyName]) {
+					continue;
+				}
 
-		if (diffPropertyChangedKeys.length) {
+				const previousValue = this._properties[propertyName];
+				const newValue = properties[propertyName];
+				const diffFunctions = this._defaultDiffPropertyFunctions[propertyName] || [auto];
+
+				for (let i = 0; i < diffFunctions.length; i++) {
+					const result = diffFunctions[i](previousValue, newValue);
+					if (result.changed) {
+						changed = true;
+						break;
+					}
+				}
+				if (changed) {
+					break;
+				}
+			}
+		}
+
+		triggeredReactions.forEach(({ reaction, previousProperties, properties }) => {
+			reaction(previousProperties, properties);
+		});
+
+		if (changed) {
+			this._dirty = true;
 			this.emit({
 				type: 'properties:changed',
-				target: this,
-				properties: this.properties,
-				changedPropertyKeys: diffPropertyChangedKeys
+				target: this
 			});
 		}
-		this._previousProperties = this.properties;
+		this._properties = { ...properties, ...diffPropertyValues };
 	}
 
 	public get children(): (C | null)[] {
@@ -604,6 +605,41 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 
 	protected get registries(): RegistryHandler {
 		return this._registries;
+	}
+
+	private _mapDiffPropertyFunctions() {
+		this._hasMappedDiffFunctions = true;
+		const registeredDiffPropertyConfigs: DiffPropertyConfig[] = this.getDecorator('diffProperty');
+
+		registeredDiffPropertyConfigs.forEach((config: DiffPropertyConfig) => {
+			const { propertyName, reaction, diffFunction } = config;
+			if (reaction) {
+				const existingDiffConfigs = this._diffPropertyReactionFunctionMap.get(reaction);
+				if (existingDiffConfigs) {
+					this._diffPropertyReactionFunctionMap.set(reaction, [ ...existingDiffConfigs, config ]);
+				}
+				else {
+					this._diffPropertyReactionFunctionMap.set(reaction, [ config ]);
+				}
+			}
+
+			if (diffFunctionsArray.indexOf(diffFunction) === -1) {
+				if (!this._customDiffPropertyFunctions[propertyName]) {
+					this._customDiffPropertyFunctions[propertyName] = [ diffFunction ];
+				}
+				else {
+					this._customDiffPropertyFunctions[propertyName].push(diffFunction);
+				}
+			}
+			else {
+				if (!this._defaultDiffPropertyFunctions[propertyName]) {
+					this._defaultDiffPropertyFunctions[propertyName] = [ diffFunction ];
+				}
+				else {
+					this._defaultDiffPropertyFunctions[propertyName].push(diffFunction);
+				}
+			}
+		});
 	}
 
 	/**
