@@ -292,37 +292,11 @@ export interface WNode<W extends WidgetBaseInterface = DefaultWidgetBaseInterfac
 export type DNode<W extends WidgetBaseInterface = DefaultWidgetBaseInterface> = HNode | WNode<W> | string | null;
 
 /**
- * the event emitted on properties:changed
- */
-export interface PropertiesChangeEvent<T, P extends WidgetProperties> extends EventTypedObject<'properties:changed'> {
-	/**
-	 * the full set of properties
-	 */
-	properties: P;
-	/**
-	 * the changed properties between setProperty calls
-	 */
-	changedPropertyKeys: string[];
-	/**
-	 * the target (this)
-	 */
-	target: T;
-}
-
-/**
  * Property Change record for specific property diff functions
  */
 export interface PropertyChangeRecord {
 	changed: boolean;
 	value: any;
-}
-
-/**
- * Properties changed record, return for diffProperties
- */
-export interface PropertiesChangeRecord<P extends WidgetProperties> {
-	changedKeys: string[];
-	properties: P;
 }
 
 /**

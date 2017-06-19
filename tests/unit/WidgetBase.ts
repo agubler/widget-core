@@ -4,7 +4,7 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import { stub, spy, SinonStub } from 'sinon';
 import { v, w, registry } from '../../src/d';
-import { DNode, WidgetProperties } from '../../src/interfaces';
+import { DNode } from '../../src/interfaces';
 import {
 	WidgetBase,
 	diffProperty,
@@ -13,16 +13,6 @@ import {
 	beforeRender
 } from '../../src/WidgetBase';
 import WidgetRegistry, { WIDGET_BASE_TYPE } from './../../src/WidgetRegistry';
-
-interface TestProperties extends WidgetProperties {
-	id: string;
-	foo: string;
-	bar?: null | string;
-	baz?: number;
-	qux?: boolean;
-}
-
-class TestWidget extends WidgetBase<TestProperties> {}
 
 let consoleStub: SinonStub;
 

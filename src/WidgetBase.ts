@@ -1,6 +1,4 @@
-import { Evented, BaseEventedEvents } from '@dojo/core/Evented';
-import { EventedListenerOrArray } from '@dojo/interfaces/bases';
-import { Handle } from '@dojo/interfaces/core';
+import { Evented } from '@dojo/core/Evented';
 import { VNode, ProjectionOptions, VNodeProperties } from '@dojo/interfaces/vdom';
 import Map from '@dojo/shim/Map';
 import { from as arrayFrom } from '@dojo/shim/array';
@@ -15,7 +13,6 @@ import {
 	WidgetProperties,
 	WidgetBaseInterface,
 	PropertyChangeRecord,
-	PropertiesChangeEvent,
 	RegistryLabel,
 	HNode,
 	WNode,
@@ -60,10 +57,6 @@ interface DiffPropertyConfig {
 	propertyName: string;
 	diffType: DiffType;
 	diffFunction?<P>(previousProperty: P, newProperty: P): PropertyChangeRecord;
-}
-
-export interface WidgetBaseEvents<P extends WidgetProperties> extends BaseEventedEvents {
-	(type: 'properties:changed', handler: EventedListenerOrArray<WidgetBase<P>, PropertiesChangeEvent<WidgetBase<P>, P>>): Handle;
 }
 
 const decoratorMap = new Map<Function, Map<string, any[]>>();
@@ -141,11 +134,6 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 	 * static identifier
 	 */
 	static _type: symbol = WIDGET_BASE_TYPE;
-
-	/**
-	 * on for the events defined for widget base
-	 */
-	public on: WidgetBaseEvents<P>;
 
 	/**
 	 * children array
