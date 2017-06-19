@@ -21,9 +21,9 @@ We also provide a suite of pre-built widgets to use in your applications: [(@doj
         - [Public API](#public-api)
         - [The 'properties' lifecycle](#the-properties-lifecycle)
             - [Custom property diff control](#custom-property-diff-control)
-            - [The `properties:changed` event](#the-propertieschanged-event)
+        - [Render lifecycle](#render-lifecycle)
         - [Projector](#projector)
-		  - [Server Side Rendering](#server-side-rendering)
+        - [Server Side Rendering](#server-side-rendering)
         - [Event Handling](#event-handling)
         - [Widget Registry](#widget-registry)
         - [Injecting State](#injecting-state)
@@ -297,68 +297,9 @@ class MyWidget extends WidgetBase<WidgetProperties> {
 
 If a property has a custom diff function then that property is excluded from the default property diff.
 
-##### The 'properties:changed' event
-
-When `diffProperties` has completed, the results are used to update the properties on the widget instance.
-If any properties were changed, then the `properties:changed` event is emitted. If the new properties do **not** contain keys from the previous properties, the properties are marked as changed.
-
-```typescript
-// set the initial properties
-$widget->setProperties({
-	foo: true,
-	bar: true
-});
-
-// properties:changed will include the "bar" property
-$widget->setProperties({
-	foo: true
-});
-```
-
-Attaching a listener to the event is exposed via a decorator `@onPropertiesChanged`.
-
-```ts
-class MyWidget extends WidgetBase<WidgetProperties> {
-
-	@onPropertiesChanged
-	myPropChangedListener(evt: PropertiesChangeEvent<this, WidgetProperties>) {
-		// do something
-	}
-}
-```
-
-For non decorator environments the listener can be registered using the `onPropertiesChanged ` function in the constructor.
-
-```ts
-class MyWidget extends WidgetBase<WidgetProperties> {
-
-	constructor() {
-		super();
-		onPropertiesChanged(this.myPropChangedListener)(this);
-	}
-
-	myPropChangedListener(evt: PropertiesChangeEvent<this, WidgetProperties>) {
-		// do something
-	}
-}
-```
-
-Example event payload
-
-```ts
-{
-	type: 'properties:changed',
-	target: this,
-	properties: { foo: 'bar', baz: 'qux' },
-	changedKeyValues: [ 'foo' ]
-}
-```
-
-`changedKeyValues` represents a list of keys in the `properties` key/value pairs where the values have changed.
-
-Finally once all the attached events have been processed, the properties lifecycle is complete and the finalized widget properties are available during the render cycle functions.
-
 <!-- TODO: render lifecycle goes here -->
+
+#### Render Lifecycle
 
 Occasionally, in a mixin or base widget class, it my be required to provide logic that needs to be executed before or after a widget's `render` call. These lifecycle hooks are supported in `WidgetBase` and operate as before and after aspects.
 
