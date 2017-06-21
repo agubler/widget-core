@@ -380,14 +380,15 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 			const reactionProperties: any = {};
 			const reactionPreviousProperties: any = {};
 			let triggerReaction = false;
-			configs.forEach((config) => {
-				const previousProperty = this._properties[config.propertyName];
-				const newProperty = properties[config.propertyName];
-				const result = config.diffFunction(previousProperty, newProperty);
-				reactionProperties[config.propertyName] = result.value;
-				reactionPreviousProperties[config.propertyName] = previousProperty;
-				diffPropertyValues[config.propertyName] = result.value;
-
+			configs.forEach(({ propertyName, diffFunction }) => {
+				const previousProperty = this._properties[propertyName];
+				const newProperty = properties[propertyName];
+				const result = diffFunction(previousProperty, newProperty);
+				reactionProperties[propertyName] = result.value;
+				reactionPreviousProperties[propertyName] = previousProperty;
+				if (propertyName in properties) {
+					diffPropertyValues[propertyName] = result.value;
+				}
 				if (result.changed) {
 					changed = true;
 					triggerReaction = true;
@@ -411,6 +412,9 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 
 				diffFunctions.forEach((diffFunction) => {
 					const result = diffFunction(previousProperty, newProperty);
+					if (propertyName in properties) {
+						diffPropertyValues[propertyName] = result.value;
+					}
 					if (result.changed) {
 						changed = true;
 					}
