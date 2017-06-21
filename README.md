@@ -11,6 +11,8 @@ widget-core is library to create powerful, but simple widgets.
 * **DOM Abstractions:** Widget-core provides abstractions to avoid needing to access or manipulate the DOM outside of the reactive render lifecycle.
 * **I18n & Themes:** Widget-core provides core mixins to enable internationalization and theming support for your components.
 
+-----
+
  - [Installation](#installation)
  - [Features](#features)
  	- [Basic Widgets](#basic-widgets)
@@ -31,6 +33,23 @@ widget-core is library to create powerful, but simple widgets.
     - [Setup Installation](#setup-installation)
     - [Testing](#testing)
 - [Licensing Information](#licensing-information)
+
+## Installation
+
+To use @dojo/widget-core, install the package along with its required peer dependencies:
+
+```shell
+npm install @dojo/widget-core
+
+# peer dependencies
+npm install @dojo/has
+npm install @dojo/shim
+npm install @dojo/core
+npm install @dojo/i18n
+npm install maquette
+```
+
+You can also use the [dojo cli](https://github.com/dojo/cli) to create a complete Dojo 2 skeleton application.
 
 ## Features
 
