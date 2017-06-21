@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/dojo/widget-core/branch/master/graph/badge.svg)](https://codecov.io/gh/dojo/widget-core)
 [![npm version](https://badge.fury.io/js/%40dojo%2Fwidget-core.svg)](https://badge.fury.io/js/%40dojo%2Fwidget-core)
 
-widget-core is library to create powerful, but simple widgets.
+widget-core is library to create powerful, composable user interface widgets.
 
 * **Reactive & unidirectional:** Widget-core follows core reactive principles to ensure predictable consistent behavior.
 * **Encapsulated Widgets:** Create independent encapsulated widgets that can be wired together to create complex and beautiful user interfaces.
