@@ -22,7 +22,7 @@ widget-core is library to create powerful, composable user interface widgets.
 		- [Extracting Widgets](#extracting-widgets)
 	- [Classes & Theming](#classes--theming)
 	- [Internationalization](#internationalization)
-- [Key Principles](key-principles)
+- [Key Principles](#key-principles)
 - [Advanced Concepts](#advanced-concepts)
 	- [Advanced Properties](#advanced-properties)
 	- [Widget Registry](#widget-registry)
