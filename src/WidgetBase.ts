@@ -54,7 +54,7 @@ enum WidgetRenderState {
 	RENDER
 }
 
-interface PropertyChangeReaction {
+export interface PropertyChangeReaction {
 	(previousProperties: any, properties: any): void;
 }
 
