@@ -24,6 +24,7 @@ widget-core is library to create powerful, but simple widgets.
 	- [Internationalization](#internationalization)
 - [Key Principles](key-principles)
 - [Advanced Concepts](#advanced-concepts)
+	- [Advanced Properties](advanced-properties)
 	- [Widget Registry](#widget-registry)
 	- [DOM Wrapper](#dom-wrapper)
 	- [Meta Configuration](meta-configuration)
@@ -273,9 +274,15 @@ These are some of the **important** principles to keep in mind when creating and
 5. **Never** update `properties` within a widget instance
 
 ## Advanced Concepts
+
+### Advanced Properties
+
 ### Widget Registry
+
 ### DOM Wrapper
+
 ### Meta Configuration
+
 ### Web Components
 
 ## API
