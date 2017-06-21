@@ -47,7 +47,6 @@ npm install @dojo/has
 npm install @dojo/shim
 npm install @dojo/core
 npm install @dojo/i18n
-npm install maquette
 ```
 
 You can also use the [dojo cli](https://github.com/dojo/cli) to create a complete Dojo 2 skeleton application.
