@@ -4,8 +4,8 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import { stub, spy, SinonStub } from 'sinon';
 import { v, w, registry } from '../../src/d';
-import { DNode, Render, WidgetProperties } from '../../src/interfaces';
-import { ignore } from './../../src/diff';
+import { DNode, Render, WidgetProperties, PropertyChangeRecord } from '../../src/interfaces';
+import { ignore, always } from './../../src/diff';
 import {
 	WidgetBase,
 	diffProperty,
@@ -15,8 +15,8 @@ import {
 import WidgetRegistry, { WIDGET_BASE_TYPE } from './../../src/WidgetRegistry';
 
 interface TestProperties extends WidgetProperties {
-	id: string;
 	foo: string;
+	id?: string;
 	bar?: null | string;
 	baz?: number;
 	qux?: boolean;
@@ -179,61 +179,90 @@ registerSuite({
 		}
 	},
 	diffProperty: {
-		'decorator at class level'() {
+		'decorator': {
+			'diff with no reaction'() {
 				let callCount = 0;
-				let value;
-
-				@diffProperty('foo', (previousProperty: any, newProperty: any) => {
+				let propertiesChanged = false;
+				function diffFoo(previousProperty: any, newProperty: any) {
 					callCount++;
+					assert.equal(newProperty, 'bar');
 					return {
 						changed: true,
-						value: 'new-value'
+						value: newProperty
 					};
-				})
-				class TestWidget extends WidgetBase<any> {
-					render() {
-						value = this.properties.foo;
-						return 'foo';
-					}
 				}
+
+				@diffProperty('foo', diffFoo)
+				@diffProperty('bar', diffFoo)
+				class TestWidget extends WidgetBase<TestProperties> {}
 
 				const testWidget = new TestWidget();
-				testWidget.__setProperties__({ foo: 'bar' });
-				testWidget.__render__();
+				testWidget.on('properties:changed', () => {
+					propertiesChanged = true;
+				});
+
+				testWidget.__setProperties__({ id: '', foo: 'bar' });
 				assert.equal(callCount, 1);
-				assert.equal(value, 'new-value');
-		},
-		decorator() {
-			let callCount = 0;
+				assert.isTrue(propertiesChanged);
+			},
+			'diff with reaction': {
+				'reaction does not execute if no registered properties are changed'() {
+					let callCount = 0;
+					function customDiff(previousProperty: any, newProperty: any) {
+						callCount++;
+						return {
+							changed: false,
+							value: newProperty
+						};
+					}
 
-			function diffFoo(previousProperty: any, newProperty: any) {
-				callCount++;
-				assert.equal(newProperty, 'bar');
-				return {
-					changed: false,
-					value: newProperty
-				};
-			}
+					class TestWidget extends WidgetBase<TestProperties> {
 
-			@diffProperty('foo', diffFoo)
-			class TestWidget extends WidgetBase<any> { }
+						reactionCalled = false;
 
-			const testWidget = new TestWidget();
-			testWidget.__setProperties__({ foo: 'bar' });
+						@diffProperty('foo', customDiff)
+						@diffProperty('id', customDiff)
+						protected onFooOrBarChanged(): void {
+							this.reactionCalled = true;
+						}
+					}
+					const testWidget = new TestWidget();
+					testWidget.__setProperties__({ id: '', foo: 'bar' });
+					assert.strictEqual(callCount, 2);
+					assert.isFalse(testWidget.reactionCalled);
+				},
+				'reaction executed when at least one registered properties is changed'() {
+					let callCount = 0;
+					function customDiff(previousProperty: any, newProperty: any) {
+						callCount++;
+						return {
+							changed: newProperty === 'bar' ? true : false,
+							value: newProperty
+						};
+					}
 
-			assert.equal(callCount, 1);
-		},
-		'non decorator'() {
-			let callCount = 0;
+					class TestWidget extends WidgetBase<TestProperties> {
 
-			class TestWidget extends WidgetBase<any> {
+						reactionCalled = false;
 
-				constructor() {
-					super();
-					diffProperty('foo', this.diffPropertyFoo)(this);
+						@diffProperty('foo', customDiff)
+						@diffProperty('id', customDiff)
+						protected onFooOrBarChanged(): void {
+							this.reactionCalled = true;
+						}
+					}
+					const testWidget = new TestWidget();
+					testWidget.__setProperties__({ id: '', foo: 'bar' });
+					assert.strictEqual(callCount, 2);
+					assert.isTrue(testWidget.reactionCalled);
 				}
+			}
+		},
+		'non decorator': {
+			'diff with no reaction'() {
+				let callCount = 0;
 
-				diffPropertyFoo(this: any, previousProperty: any, newProperty: any): any {
+				function diffPropertyFoo(previousProperty: string, newProperty: string): PropertyChangeRecord {
 					callCount++;
 					assert.equal(newProperty, 'bar');
 					return {
@@ -241,12 +270,78 @@ registerSuite({
 						value: newProperty
 					};
 				}
+
+				class TestWidget extends WidgetBase<TestProperties> {
+					constructor() {
+						super();
+						diffProperty('foo', diffPropertyFoo)(this);
+					}
+				}
+
+				const testWidget = new TestWidget();
+				testWidget.__setProperties__({ id: '', foo: 'bar' });
+				assert.equal(callCount, 1);
+			},
+			'diff with reaction': {
+				'reaction does not execute if no registered properties are changed'() {
+					let callCount = 0;
+
+					function diffPropertyFoo(previousProperty: string, newProperty: string): PropertyChangeRecord {
+						callCount++;
+						assert.equal(newProperty, 'bar');
+						return {
+							changed: false,
+							value: newProperty
+						};
+					}
+
+					class TestWidget extends WidgetBase<TestProperties> {
+						reactionCalled = false;
+						constructor() {
+							super();
+							diffProperty('foo', diffPropertyFoo, this.onFooPropertyChanged)(this);
+						}
+
+						onFooPropertyChanged(previousProperties: any, newProperties: any): void {
+							this.reactionCalled = true;
+						}
+					}
+
+					const testWidget = new TestWidget();
+					testWidget.__setProperties__({ id: '', foo: 'bar' });
+					assert.equal(callCount, 1);
+					assert.isFalse(testWidget.reactionCalled);
+				},
+				'reaction executed when at least one registered properties is changed'() {
+					let callCount = 0;
+
+					function customDiffProperty(previousProperty: string, newProperty: string): PropertyChangeRecord {
+						callCount++;
+						return {
+							changed: newProperty === 'bar' ? true : false,
+							value: newProperty
+						};
+					}
+
+					class TestWidget extends WidgetBase<TestProperties> {
+						reactionCalled = false;
+						constructor() {
+							super();
+							diffProperty('foo', customDiffProperty, this.onPropertyChanged)(this);
+							diffProperty('id', customDiffProperty, this.onPropertyChanged)(this);
+						}
+
+						onPropertyChanged(previousProperties: any, newProperties: any): void {
+							this.reactionCalled = true;
+						}
+					}
+
+					const testWidget = new TestWidget();
+					testWidget.__setProperties__({ id: '', foo: 'bar' });
+					assert.equal(callCount, 2);
+					assert.isTrue(testWidget.reactionCalled);
+				}
 			}
-
-			const testWidget = new TestWidget();
-			testWidget.__setProperties__({ foo: 'bar' });
-
-			assert.equal(callCount, 1);
 		},
 		'decorators can be applied at instance level'() {
 			let renderCallCount = 0;
@@ -272,44 +367,71 @@ registerSuite({
 
 			assert.equal(renderCallCount, 1);
 		},
-		'multiple decorators on the same method cause the first matching decorator to win'() {
+		'multiple default decorators on the same method cause the first matching decorator to win'() {
+			let propertiesChanged = false;
+
+			@diffProperty('foo', ignore)
+			class TestWidget extends WidgetBase<TestProperties> { }
+
+			@diffProperty('foo', always)
+			class SubWidget extends TestWidget { }
+
+			const widget = new SubWidget();
+			widget.on('properties:changed', () => {
+				propertiesChanged = true;
+			});
+			widget.__setProperties__({
+				foo: 'bar'
+			});
+
+			assert.isTrue(propertiesChanged);
+		},
+		'multiple custom decorators on the same method cause the first matching decorator to win'() {
 			const calls: string[] = [];
 
-			class TestWidget extends WidgetBase<any> {
-				@diffProperty('prop')
-				ignoreProp(previousValue: any, newValue: any) {
-					calls.push('ignore');
-
-					return {
-						changed: false,
-						value: newValue
-					};
-				}
+			function diff1(prevProp: any, newProp: any): PropertyChangeRecord {
+				calls.push('diff1');
+				return {
+					changed: false,
+					value: newProp
+				};
 			}
 
-			class SubWidget extends TestWidget {
-				@diffProperty('prop')
-				alwaysProp(previousValue: any, newValue: any) {
-					calls.push('always');
-
-					return {
-						changed: true,
-						value: newValue
-					};
-				}
+			function diff2(prevProp: any, newProp: any): PropertyChangeRecord {
+				calls.push('diff2');
+				return {
+					changed: false,
+					value: newProp
+				};
 			}
+
+			@diffProperty('foo', diff1)
+			class TestWidget extends WidgetBase<TestProperties> { }
+
+			@diffProperty('foo', diff2)
+			class SubWidget extends TestWidget { }
 
 			const widget = new SubWidget();
 			widget.__setProperties__({
-				prop: true
+				id: '',
+				foo: 'bar'
 			});
 
-			assert.deepEqual(calls, ['ignore', 'always']);
+			assert.deepEqual(calls, ['diff1', 'diff2']);
+			assert.strictEqual(calls[0], 'diff1');
+			assert.strictEqual(calls[1], 'diff2');
 		},
 
 		'diffProperty properties are excluded from catch-all'() {
-			@diffProperty('prop', ignore)
-			class TestWidget extends WidgetBase<any> { }
+			function customDiff() {
+				return {
+					changed: false,
+					value: ''
+				};
+			}
+			@diffProperty('foo', customDiff)
+			@diffProperty('id', customDiff)
+			class TestWidget extends WidgetBase<TestProperties> { }
 
 			const widget = new TestWidget();
 			widget.on('properties:changed', result => {
@@ -317,7 +439,8 @@ registerSuite({
 			});
 
 			widget.__setProperties__({
-				prop: true
+				foo: '',
+				id: ''
 			});
 		},
 

@@ -14,7 +14,6 @@ import {
 	BeforeRender,
 	DNode,
 	HNode,
-	PropertyChangeRecord,
 	PropertiesChangeEvent,
 	RegistryLabel,
 	Render,
@@ -103,12 +102,12 @@ export function beforeRender(method?: Function) {
  * @param diffType      The diff type, default is DiffType.AUTO.
  * @param diffFunction  A diff function to run if diffType if DiffType.CUSTOM
  */
-export function diffProperty(propertyName: string, diffFunction: (previousProperty: any, newProperty: any) => PropertyChangeRecord = auto) {
+export function diffProperty(propertyName: string, diffFunction: DiffFunction = auto, reactionFunction?: PropertyChangeReaction) {
 	return handleDecorator((target, propertyKey) => {
 		target.addDecorator('diffProperty', {
 			propertyName,
 			diffFunction,
-			reaction: propertyKey ? target[propertyKey] : undefined
+			reaction: propertyKey ? target[propertyKey] : reactionFunction
 		});
 	});
 }
@@ -622,21 +621,22 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 					this._diffPropertyReactionFunctionMap.set(reaction, [ config ]);
 				}
 			}
-
-			if (diffFunctionsArray.indexOf(diffFunction) === -1) {
-				if (!this._customDiffPropertyFunctions[propertyName]) {
-					this._customDiffPropertyFunctions[propertyName] = [ diffFunction ];
-				}
-				else {
-					this._customDiffPropertyFunctions[propertyName].push(diffFunction);
-				}
-			}
 			else {
-				if (!this._defaultDiffPropertyFunctions[propertyName]) {
-					this._defaultDiffPropertyFunctions[propertyName] = [ diffFunction ];
+				if (diffFunctionsArray.indexOf(diffFunction) === -1) {
+					if (!this._customDiffPropertyFunctions[propertyName]) {
+						this._customDiffPropertyFunctions[propertyName] = [ diffFunction ];
+					}
+					else {
+						this._customDiffPropertyFunctions[propertyName].push(diffFunction);
+					}
 				}
 				else {
-					this._defaultDiffPropertyFunctions[propertyName].push(diffFunction);
+					if (!this._defaultDiffPropertyFunctions[propertyName]) {
+						this._defaultDiffPropertyFunctions[propertyName] = [ diffFunction ];
+					}
+					else {
+						this._defaultDiffPropertyFunctions[propertyName].push(diffFunction);
+					}
 				}
 			}
 		});
