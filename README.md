@@ -28,6 +28,7 @@ widget-core is library to create powerful, composable user interface widgets.
 	- [Widget Registry](#widget-registry)
 	- [DOM Wrapper](#dom-wrapper)
 	- [Meta Configuration](#meta-configuration)
+	- [Tsx Support](#tsx-support)
 	- [Web Components](#web-components)
 - [API](#api)
 - [How Do I Contribute?](#how-do-i-contribute)
@@ -280,6 +281,8 @@ These are some of the **important** principles to keep in mind when creating and
 ### DOM Wrapper
 
 ### Meta Configuration
+
+### Tsx Support
 
 ### Web Components
 
