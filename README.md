@@ -26,6 +26,7 @@ widget-core is library to create powerful, composable user interface widgets.
 - [Advanced Concepts](#advanced-concepts)
 	- [Advanced Properties](#advanced-properties)
 	- [Widget Registry](#widget-registry)
+	- [Render Lifecycle Hooks](#render-lifecycle-hooks)
 	- [DOM Wrapper](#dom-wrapper)
 	- [Meta Configuration](#meta-configuration)
 	- [Tsx Support](#tsx-support)
@@ -277,6 +278,8 @@ These are some of the **important** principles to keep in mind when creating and
 ### Advanced Properties
 
 ### Widget Registry
+
+### Render Lifecycle Hooks
 
 ### DOM Wrapper
 
