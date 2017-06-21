@@ -8,7 +8,7 @@ widget-core is library to create powerful, but simple widgets.
 
 * **Reactive & unidirectional:** Widget-core follows core reactive principles to ensure predictable consistent behavior.
 * **Encapsulated Widgets:** Create independent encapsulated widgets that can be wired together to create complex and beautiful user interfaces.
-* **DOM Abstractions:** Widget-core provides abstractions to avoid needing to access or manipulate the DOM outside of the reactive render life-cycle.
+* **DOM Abstractions:** Widget-core provides API abstractions to avoid needing to access or manipulate the DOM outside of the reactive render life-cycle.
 * **I18n & Themes:** Widget-core provides core mixins to enable internationalization and theming support for your components.
 
 -----
@@ -20,7 +20,7 @@ widget-core is library to create powerful, but simple widgets.
 		- [Widgets and Properties](#widgets-and-properties)
 		- [Composing Widgets](#composing-widgets)
 		- [Extracting Widgets](#extracting-widgets)
-	- [Classes & Theming](#classes-theming)
+	- [Classes & Theming](#classes--theming)
 	- [Internationalization](#internationalization)
 - [Key Principles](key-principles)
 - [Advanced Concepts](#advanced-concepts)
