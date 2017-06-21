@@ -454,13 +454,6 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 		this._properties = { ...properties, ...diffPropertyValues };
 	}
 
-	private _getDiffPropertyDetails(source: {[key: string]: DiffFunction[]}, newProperties: any, propertyName: string): [ DiffFunction[], any, any ] {
-		const diffFunctions: DiffFunction[] = source[propertyName];
-		const previousProperty = this._properties[propertyName];
-		const newProperty = newProperties[propertyName];
-		return [ diffFunctions, previousProperty, newProperty ];
-	}
-
 	public get children(): (C | null)[] {
 		return this._children;
 	}
@@ -646,6 +639,20 @@ export class WidgetBase<P extends WidgetProperties = WidgetProperties, C extends
 				}
 			}
 		});
+	}
+
+	/**
+	 * Return a tuple of property information from registered diffFunctions and properties
+	 *
+	 * @param source The source to look up the diffFunctions
+	 * @param properties The properties to look up the value of
+	 * @param propertyName The property name
+	 */
+	private _getDiffPropertyDetails(source: {[key: string]: DiffFunction[]}, properties: any, propertyName: string): [ DiffFunction[], any, any ] {
+		const diffFunctions: DiffFunction[] = source[propertyName];
+		const previousProperty = this._properties[propertyName];
+		const newProperty = properties[propertyName];
+		return [ diffFunctions, previousProperty, newProperty ];
 	}
 
 	/**
