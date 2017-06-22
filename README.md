@@ -20,6 +20,7 @@ widget-core is library to create powerful, composable user interface widgets.
 		- [Widgets and Properties](#widgets-and-properties)
 		- [Composing Widgets](#composing-widgets)
 		- [Extracting Widgets](#extracting-widgets)
+	- [Mixins](#mixins)
 	- [Classes & Theming](#classes--theming)
 	- [Internationalization](#internationalization)
 - [Key Principles](#key-principles)
@@ -260,9 +261,49 @@ class List extends WidgetBase<ListProperties> {
 
 Additionally the `ListItem` is now reusable in other areas of our application(s).
 
+### Mixins
+
+Dojo 2 makes use of mixins to decorate additional functionality and properties to existing widgets. Mixins provide a mechanism to allow loosely coupled design and composition of behaviors into existing widgets.
+
+Examples of this can be seen with the #classes and #internationalization
+
 ### Classes & Theming
 
 ### Internationalization
+
+Widgets can be internationalized by mixing in `@dojo/widget-core/mixins/I18n`.
+[Message bundles](https://github.com/dojo/i18n) are localized by passing them to `localizeBundle`.
+
+If the bundle supports the widget's current locale, but those locale-specific messages have not yet been loaded, then the default messages are returned.
+The widget will be invalidated once the locale-specific messages have been loaded.
+
+Each widget can have its own locale by passing a property - `properties.locale`.
+If no locale is set, then the default locale, as set by [`@dojo/i18n`](https://github.com/dojo/i18n), is assumed.
+
+```ts
+const MyWidgetBase = I18nMixin(WidgetBase);
+
+class I18nWidget extends MyWidgetBase<I18nWidgetProperties> {
+	render: function () {
+		// Load the "greetings" messages for the current locale. If the locale-specific
+		// messages have not been loaded yet, then the default messages are returned,
+		// and the widget will be invalidated once the locale-specific messages have
+		// loaded.
+		const messages = this.localizeBundle(greetingsBundle);
+
+		return v('div', { title: messages.hello }, [
+			w(Label, {
+				// Passing a message string to a child widget.
+				label: messages.purchaseItems
+			}),
+			w(Button, {
+				// Passing a formatted message string to a child widget.
+				label: messages.format('itemCount', { count: 2 })
+			})
+		]);
+	}
+}
+```
 
 ## Key Principles
 
