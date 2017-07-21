@@ -53,7 +53,7 @@
     "typescript": "~2.4.1"
   },
   "dependencies": {
-    "maquette": "~2.5.1",
+    "snabbdom": "^0.6.9",
     "pepjs": "^0.4.2"
   }
 }
