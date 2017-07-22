@@ -47,7 +47,7 @@ registerSuite({
 		const div = document.createElement('div');
 
 		const widget = new TestWidget();
-		widget.append(div);
+		widget.attach(div);
 
 		assert.strictEqual(widget.getMeta(), widget.getMeta());
 	},
@@ -71,7 +71,7 @@ registerSuite({
 		const div = document.createElement('div');
 
 		const widget = new TestWidget();
-		widget.append(div);
+		widget.attach(div);
 		const meta = widget.getMeta();
 
 		assert.isTrue(meta.has('root'));
@@ -106,7 +106,7 @@ registerSuite({
 		const div = document.createElement('div');
 
 		const widget = new TestWidget();
-		widget.append(div);
+		widget.attach(div);
 
 		resolveRAF();
 
@@ -146,7 +146,7 @@ registerSuite({
 		const div = document.createElement('div');
 
 		const widget = new TestWidget();
-		widget.append(div);
+		widget.attach(div);
 
 		resolveRAF();
 
@@ -176,7 +176,7 @@ registerSuite({
 		const div = document.createElement('div');
 
 		const widget = new TestWidget();
-		widget.append(div);
+		widget.attach(div);
 
 		assert.throws(() => {
 			resolveRAF();

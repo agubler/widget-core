@@ -7,8 +7,7 @@ import i18n, {
 	Messages,
 	observeLocale
 } from '@dojo/i18n/i18n';
-import { VNodeProperties } from '@dojo/interfaces/vdom';
-import { Constructor, DNode, WidgetProperties } from './../interfaces';
+import { Constructor, DNode, VDomProperties, WidgetProperties } from './../interfaces';
 import { afterRender, WidgetBase } from './../WidgetBase';
 import { isHNode } from './../d';
 
@@ -31,9 +30,11 @@ export interface I18nProperties extends WidgetProperties {
  * @private
  * An internal helper interface for defining locale and text direction attributes on widget nodes.
  */
-interface I18nVNodeProperties extends VNodeProperties {
-	dir: string | null;
-	lang: string | null;
+interface I18nVNodeProperties extends VDomProperties {
+	props: {
+		dir: string | null;
+		lang: string | null;
+	};
 }
 
 export type LocalizedMessages<T extends Messages> = T & {
@@ -109,15 +110,17 @@ export function I18nMixin<T extends Constructor<WidgetBase<any>>>(Base: T): T & 
 			if (isHNode(result)) {
 				const { locale, rtl } = this.properties;
 				const vNodeProperties: I18nVNodeProperties = {
-					dir: null,
-					lang: null
+					props: {
+						dir: null,
+						lang: null
+					}
 				};
 
 				if (typeof rtl === 'boolean') {
-					vNodeProperties['dir'] = rtl ? 'rtl' : 'ltr';
+					vNodeProperties.props.dir = rtl ? 'rtl' : 'ltr';
 				}
 				if (locale) {
-					vNodeProperties['lang'] = locale;
+					vNodeProperties.props.lang = locale;
 				}
 
 				assign(result.properties, vNodeProperties);

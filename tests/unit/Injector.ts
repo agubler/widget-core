@@ -64,10 +64,10 @@ registerSuite({
 		const renderedNode: any = injector.__render__();
 		assert.deepEqual(testProperties, { qux: 'baz' });
 		assert.deepEqual(testChildren, [ 'child' ]);
-		assert.deepEqual(renderedNode.properties, { bind });
-		assert.deepEqual(renderedNode.children[1].properties, { bind });
-		assert.deepEqual(renderedNode.children[2].properties, { bind });
-		renderedNode.children[0].properties.testFunction();
+		assert.deepEqual(renderedNode.data, { bind });
+		assert.deepEqual(renderedNode.children[1].data, { bind });
+		assert.deepEqual(renderedNode.children[2].data, { bind });
+		renderedNode.children[0].data.props.testFunction();
 	},
 	'uses default mappers'() {
 		const context = new Context({

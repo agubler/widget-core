@@ -7,7 +7,7 @@ export class Base {
 	private _invalidate: () => void;
 	private _invalidating: number;
 	private _requiredNodes: Set<string>;
-	protected nodes: Map<string, HTMLElement>;
+	protected nodes: Map<string | number, HTMLElement>;
 
 	constructor(properties: WidgetMetaProperties) {
 		this._invalidate = properties.invalidate;

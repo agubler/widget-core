@@ -247,7 +247,7 @@ export function initializeElement(element: CustomElement) {
 	element.setWidgetInstance(widgetInstance);
 
 	return function() {
-		widgetInstance.append(element);
+		widgetInstance.attach(element);
 	};
 }
 

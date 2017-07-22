@@ -61,7 +61,7 @@ export const loaderOptions = {
 		{ name: 'cldr-data', location: 'node_modules/cldr-data' },
 		{ name: 'cldrjs', location: 'node_modules/cldrjs' },
 		{ name: 'globalize', location: 'node_modules/globalize', main: 'dist/globalize' },
-		{ name: 'maquette', location: 'node_modules/maquette/dist', main: 'maquette' },
+		{ name: 'snabbdom', location: 'node_modules/snabbdom/dist', main: 'snabbdom' },
 		{ name: 'pepjs', location: 'node_modules/pepjs/dist', main: 'pep' },
 		{ name: 'grunt-dojo2', location: 'node_modules/grunt-dojo2'},
 		{ name: 'sinon', location: 'node_modules/sinon/pkg', main: 'sinon' }
@@ -72,6 +72,12 @@ export const loaderOptions = {
 			'cldr/event': 'cldrjs/dist/cldr/event',
 			'cldr/supplemental': 'cldrjs/dist/cldr/supplemental',
 			'cldr/unresolved': 'cldrjs/dist/cldr/unresolved'
+		},
+		'*': {
+			'snabbdom/modules/class': 'snabbdom/snabbdom-class',
+			'snabbdom/modules/props': 'snabbdom/snabbdom-props',
+			'snabbdom/modules/style': 'snabbdom/snabbdom-style',
+			'snabbdom/modules/eventListeners': 'snabbdom/snabbdom-eventlisteners'
 		}
 	}
 };

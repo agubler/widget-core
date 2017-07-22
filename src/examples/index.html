@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Example</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style>
+		html,
+		body {
+			margin: 0;
+			padding: 0;
+		}
+		.red {
+			background: red
+		}
+		.blue {
+			background: blue
+		}
+	</style>
+</head>
+<body>
+	<script src="../../../node_modules/@dojo/loader/loader.min.js"></script>
+	<script>
+		require.config({
+			baseUrl: '../../../',
+			packages: [
+				{ name: 'src', location: '_build' },
+				{ name: '@dojo', location: 'node_modules/@dojo' },
+				{ name: 'pepjs', location: 'node_modules/pepjs/dist', main: 'pep' },
+				{ name: 'snabbdom', location: 'node_modules/snabbdom/dist', main: 'snabbdom' },
+				{ name: 'cldrjs', location: 'node_modules/cldrjs' },
+				{ name: 'globalize', location: 'node_modules/globalize', main: 'dist/globalize' }
+			],
+			map: {
+				globalize: {
+					'cldr': 'cldrjs/dist/cldr',
+					'cldr/event': 'cldrjs/dist/cldr/event',
+					'cldr/supplemental': 'cldrjs/dist/cldr/supplemental',
+					'cldr/unresolved': 'cldrjs/dist/cldr/unresolved'
+				},
+				'*': {
+					'snabbdom/modules/class': 'snabbdom/snabbdom-class',
+					'snabbdom/modules/props': 'snabbdom/snabbdom-props',
+					'snabbdom/modules/style': 'snabbdom/snabbdom-style',
+					'snabbdom/modules/eventListeners': 'snabbdom/snabbdom-eventlisteners'
+				}
+			}
+		});
+
+		require([ 'src/src/examples/main' ], function () {});
+	</script>
+</body>
+</html>

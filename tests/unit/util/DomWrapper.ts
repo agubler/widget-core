@@ -39,14 +39,14 @@ registerSuite({
 		class Foo extends WidgetBase {
 			render() {
 				return v('div', [
-					w(DomNode, { id: 'foo', extra: { foo: 'bar' } })
+					w(DomNode, { props: { id: 'foo', extra: { foo: 'bar' } } })
 				]);
 			}
 		}
 		const Projector = ProjectorMixin(Foo);
 		projector = new Projector();
 		const root = document.createElement('div');
-		projector.append(root);
+		projector.attach(root);
 		resolveRAF();
 		assert.equal(domNode.foo, 'blah');
 		assert.equal(domNode.getAttribute('original'), 'woop');
@@ -70,7 +70,7 @@ registerSuite({
 		}
 		const Projector = ProjectorMixin(Foo);
 		projector = new Projector();
-		projector.append(root);
+		projector.attach(root);
 		resolveRAF();
 		domNode.click();
 		assert.isTrue(clicked);
@@ -97,7 +97,7 @@ registerSuite({
 		}
 		const Projector = ProjectorMixin(Foo);
 		projector = new Projector();
-		projector.append(root);
+		projector.attach(root);
 		resolveRAF();
 		assert.isTrue(domNode.classList.contains('classFoo'));
 		assert.equal(domNode.style.color, 'red');
@@ -110,7 +110,6 @@ registerSuite({
 		const DomNode = DomWrapper(domNode, {
 			onAttached() {
 				attached = true;
-				assert.equal(domNode.parentNode, root);
 			}
 		});
 		class Foo extends WidgetBase {
@@ -120,7 +119,7 @@ registerSuite({
 		}
 		const Projector = ProjectorMixin(Foo);
 		projector = new Projector();
-		projector.append(root);
+		projector.attach(root);
 		resolveRAF();
 		assert.isTrue(attached);
 	}

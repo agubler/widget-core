@@ -1,4 +1,3 @@
-import { VNode } from '@dojo/interfaces/vdom';
 import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import { w, v } from '../../../src/d';
@@ -71,18 +70,18 @@ registerSuite({
 			const instance: any = new IntegrationTest();
 			instance.__setProperties__({ registry });
 
-			let result = <VNode> instance.__render__();
+			let result = instance.__render__();
 			assert.lengthOf(result.children, 1);
-			assert.strictEqual(result.children![0].vnodeSelector, 'header');
+			assert.strictEqual(result.children![0].sel, 'header');
 
 			const newRegistry = new WidgetRegistry();
 			newRegistry.define('test', Span);
 
 			instance.__setProperties__({ registry: newRegistry });
 
-			result = <VNode> instance.__render__();
+			result = instance.__render__();
 			assert.lengthOf(result.children, 1);
-			assert.strictEqual(result.children![0].vnodeSelector, 'span');
+			assert.strictEqual(result.children![0].sel, 'span');
 		}
 	}
 });

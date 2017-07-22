@@ -20,7 +20,7 @@ registerSuite({
 		'tsx generate a HNode'() {
 			const node: HNode = <HNode> tsx('div', { hello: 'world' }, [ 'child' ]);
 			assert.deepEqual(node.tag, 'div');
-			assert.deepEqual(node.properties, { hello: 'world' });
+			assert.deepEqual(node.properties.props, { hello: 'world' });
 			assert.deepEqual(node.children, [ 'child' ]);
 			assert.strictEqual(node.type, HNODE);
 		},
@@ -40,7 +40,7 @@ registerSuite({
 		'children arrays are spread correctly'() {
 			const node: HNode = <HNode> tsx('div', { hello: 'world' }, [ 'child', [ 'child-2', [ 'child-3' ] ] ]);
 			assert.deepEqual(node.tag, 'div');
-			assert.deepEqual(node.properties, { hello: 'world' });
+			assert.deepEqual(node.properties.props, { hello: 'world' });
 			assert.deepEqual(node.children, [ 'child', 'child-2', 'child-3' ]);
 			assert.strictEqual(node.type, HNODE);
 		},

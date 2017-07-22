@@ -151,39 +151,36 @@ registerSuite({
 	'on create'() {
 		const Projector = ProjectorMixin(WidgetA);
 		const projector = new Projector();
-		const handle = projector.append(root);
+		projector.attach(root);
 		assert.strictEqual(projector.lifeCycleCreated.length, 2);
 		assert.strictEqual(projector.lifeCycleUpdated.length, 0);
-		handle.destroy();
 	},
 
 	'on create order'() {
 		const Projector = ProjectorMixin(WidgetA);
 		const projector = new Projector();
-		const handle = projector.append(root);
+		projector.attach(root);
 		assert.strictEqual(projector.lifeCycleCreated[0].key, 'div2');
 		assert.strictEqual(projector.lifeCycleCreated[1].key, 'div1');
-		handle.destroy();
 	},
 
 	'on create with afterCreate'() {
 		const Projector = ProjectorMixin(WidgetB);
 		const projector = new Projector();
-		const handle = projector.append(root);
+		projector.attach(root);
 		assert.strictEqual(projector.lifeCycleCreated.length, 2);
 		// afterCreateCounter will be 1 because the other two afterCreate callbacks will be replaced in
 		// WidgetBase.
 		assert.strictEqual(afterCreateCounter, 1);
 		assert.strictEqual(afterUpdateCounter, 0);
 		assert.strictEqual(projector.lifeCycleUpdated.length, 0);
-		handle.destroy();
 	},
 
 	async 'on update'() {
 		// Render WidgetA and then modify it.  Look for calls to the updated lifecycle method.
 		const Projector = ProjectorMixin(WidgetA);
 		const projector = new Projector();
-		await projector.append(root);
+		await projector.attach(root);
 
 		projector.lifeCycleCreated = [];
 
@@ -202,7 +199,7 @@ registerSuite({
 		// Render WidgetB and then modify it.
 		const Projector = ProjectorMixin(WidgetB);
 		const projector = new Projector();
-		await projector.append(root);
+		await projector.attach(root);
 
 		projector.lifeCycleCreated = [];
 		afterCreateCounter = 0;
@@ -223,7 +220,7 @@ registerSuite({
 	async 'basic widget that always re-renders'() {
 		const Projector = ProjectorMixin(WidgetC);
 		const projector = new Projector();
-		await projector.append(root);
+		await projector.attach(root);
 
 		assert.strictEqual(projector.lifeCycleCreated.length, 1, 'Unexpected number of created nodes.');
 		assert.strictEqual(projector.lifeCycleUpdated.length, 0, 'Unexpected number of updated nodes.');
@@ -252,10 +249,9 @@ registerSuite({
 
 		const Projector = ProjectorMixin(DuplicateKeys);
 		const projector = new Projector();
-		const handle = projector.append(root);
+		projector.attach(root);
 		assert.strictEqual(projector.lifeCycleCreated.length, 2, 'Unexpected number of created nodes.');
 		assert.strictEqual(projector.lifeCycleCreated[0].element.tagName, 'SPAN');
 		assert.strictEqual(projector.lifeCycleCreated[1].element.tagName, 'DIV');
-		handle.destroy();
 	}
 });

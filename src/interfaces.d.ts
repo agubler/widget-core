@@ -1,8 +1,17 @@
 import { Evented } from '@dojo/core/Evented';
 import { EventTypedObject } from '@dojo/interfaces/core';
-import { VNode, VNodeProperties, ProjectionOptions } from '@dojo/interfaces/vdom';
+import { VNodeProperties, ProjectionOptions } from '@dojo/interfaces/vdom';
 import Map from '@dojo/shim/Map';
 import Set from '@dojo/shim/Set';
+
+import { Classes } from 'snabbdom/modules/class';
+import { VNodeStyle } from 'snabbdom/modules/style';
+import { Props } from 'snabbdom/modules/props';
+import { On } from 'snabbdom/modules/eventlisteners';
+import { Hooks } from 'snabbdom/Hooks';
+import { VNode } from 'snabbdom/VNode';
+
+export { VNode };
 
 /**
  * Generic constructor type
@@ -58,61 +67,34 @@ export type ScrollEventHandler = (event?: UIEvent) => EventHandlerResult;
 export type SubmitEventHandler = EventHandler;
 
 export type ClassesFunction = () => {
-	[index: string]: boolean | null | undefined;
+	[index: string]: boolean;
 };
 
-export interface VirtualDomProperties {
-	/**
-	 * The animation to perform when this node is added to an already existing parent.
-	 * When this value is a string, you must pass a `projectionOptions.transitions` object when creating the
-	 * projector using [[createProjector]].
-	 * {@link http://maquettejs.org/docs/animations.html|More about animations}.
-	 * @param element - Element that was just added to the DOM.
-	 * @param properties - The properties object that was supplied to the [[h]] method
-	 */
-	enterAnimation?: ((element: Element, properties?: VNodeProperties) => void) | string;
-	/**
-	 * The animation to perform when this node is removed while its parent remains.
-	 * When this value is a string, you must pass a `projectionOptions.transitions` object when creating the projector using [[createProjector]].
-	 * {@link http://maquettejs.org/docs/animations.html|More about animations}.
-	 * @param element - Element that ought to be removed from the DOM.
-	 * @param removeElement - Function that removes the element from the DOM.
-	 * This argument is provided purely for convenience.
-	 * You may use this function to remove the element when the animation is done.
-	 * @param properties - The properties object that was supplied to the [[h]] method that rendered this [[VNode]] the previous time.
-	 */
-	exitAnimation?: ((element: Element, removeElement: () => void, properties?: VNodeProperties) => void) | string;
-	/**
-	 * The animation to perform when the properties of this node change.
-	 * This also includes attributes, styles, css classes. This callback is also invoked when node contains only text and that text changes.
-	 * {@link http://maquettejs.org/docs/animations.html|More about animations}.
-	 * @param element - Element that was modified in the DOM.
-	 * @param properties - The last properties object that was supplied to the [[h]] method
-	 * @param previousProperties - The previous properties object that was supplied to the [[h]] method
-	 */
-	updateAnimation?: (element: Element, properties?: VNodeProperties, previousProperties?: VNodeProperties) => void;
+export type VirtualDomProperties = VDomProperties | LegacyVirtualDomProperties;
+
+export type VDomProperties = {
+	key?: string | number;
+	props?: Props;
+	class?: Classes | ClassesFunction;
+	style?: VNodeStyle;
+	hook?: Hooks;
+	on?: On;
+};
+
+export interface LegacyVirtualDomProperties {
 	/**
 	 * Callback that is executed after this node is added to the DOM. Child nodes and properties have
 	 * already been applied.
-	 * @param element - The element that was added to the DOM.
-	 * @param projectionOptions - The projection options that were used, see [[createProjector]].
-	 * @param vnodeSelector - The selector passed to the [[h]] function.
-	 * @param properties - The properties passed to the [[h]] function.
-	 * @param children - The children that were created.
+	 * @param vNode - The vNode that has been inserted into the DOM
 	 */
-	afterCreate?(element: Element, projectionOptions: ProjectionOptions, vnodeSelector: string, properties: VNodeProperties,
-	children: VNode[]): void;
+	afterCreate?(vNode: VNode): void;
 	/**
 	 * Callback that is executed every time this node may have been updated. Child nodes and properties
 	 * have already been updated.
-	 * @param element - The element that may have been updated in the DOM.
-	 * @param projectionOptions - The projection options that were used, see [[createProjector]].
-	 * @param vnodeSelector - The selector passed to the [[h]] function.
-	 * @param properties - The properties passed to the [[h]] function.
-	 * @param children - The children for this node.
+	 * @param oldVNode - The previous vNode
+	 * @param vNode - The vNode that has been updated in the DOM
 	 */
-	afterUpdate?(element: Element, projectionOptions: ProjectionOptions, vnodeSelector: string, properties: VNodeProperties,
-	children: VNode[]): void;
+	afterUpdate?(oldVNode: VNode, vNode: VNode): void;
 	/**
 	 * Bind should not be defined.
 	 */
@@ -122,18 +104,18 @@ export interface VirtualDomProperties {
 	 * A key is required when there are more children with the same selector and these children are added or removed dynamically.
 	 * NOTE: this does not have to be a string or number, a [[Component]] Object for instance is also possible.
 	 */
-	readonly key?: Object;
+	readonly key?: string | number;
 	/**
 	 * An object literal like `{important:true}` which allows css classes, like `important` to be added and removed
 	 * dynamically. Can also take a function, that must return an object literal.
 	 */
 	readonly classes?: {
-		[index: string]: boolean | null | undefined;
+		[index: string]: boolean;
 	} | ClassesFunction;
 	/**
 	 * An object literal like `{height:'100px'}` which allows styles to be changed dynamically. All values must be strings.
 	 */
-	readonly styles?: { [index: string]: string | null | undefined };
+	readonly styles?: { [index: string]: string };
 
 	// Pointer Events
 	onpointermove?(ev?: PointerEvent): boolean | void;
@@ -252,7 +234,7 @@ export interface HNode {
 	/**
 	 * The properties used to create the VNode
 	 */
-	properties: VirtualDomProperties;
+	properties: VDomProperties;
 
 	/**
 	 * The tagname used to create the VNode
@@ -368,7 +350,7 @@ export interface WidgetMetaConstructor<T> {
  * Properties passed to meta Base constructors
  */
 export interface WidgetMetaProperties {
-	nodes: Map<string, HTMLElement>;
+	nodes: Map<string | number, HTMLElement>;
 	requiredNodes: Set<string>;
 	invalidate: () => void;
 }

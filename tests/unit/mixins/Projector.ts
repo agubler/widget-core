@@ -1,4 +1,4 @@
-import global from '@dojo/core/global';
+/*import global from '@dojo/core/global';
 import has from '@dojo/has/has';
 import '@dojo/shim/Promise';
 import { VNode } from '@dojo/interfaces/vdom';
@@ -87,17 +87,17 @@ registerSuite({
 
 				projector.append();
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.equal(vnode.text, result);
 				assert.isUndefined(vnode.children);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 1);
-				assert.equal(vnode.children![0].vnodeSelector, 'div');
+				assert.equal(vnode.children![0].sel, 'div');
 				assert.equal(vnode.children![0].text, 'other text');
 			},
 			'string root node after an initial render'() {
@@ -106,14 +106,14 @@ registerSuite({
 
 				projector.append();
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'div');
+				assert.equal(vnode.sel, 'div');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = 'other text';
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'div');
+				assert.equal(vnode.sel, 'div');
 				assert.equal(vnode.text, 'other text');
 				assert.isUndefined(vnode.children);
 			},
@@ -123,17 +123,17 @@ registerSuite({
 
 				projector.append();
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 1);
-				assert.equal(vnode.children![0].vnodeSelector, 'div');
+				assert.equal(vnode.children![0].sel, 'div');
 				assert.equal(vnode.children![0].text, 'other text');
 
 			},
@@ -143,14 +143,14 @@ registerSuite({
 
 				projector.append();
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'h2');
+				assert.equal(vnode.sel, 'h2');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = null;
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'h2');
+				assert.equal(vnode.sel, 'h2');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 			},
@@ -160,17 +160,17 @@ registerSuite({
 
 				projector.append();
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 1);
-				assert.equal(vnode.children![0].vnodeSelector, 'div');
+				assert.equal(vnode.children![0].sel, 'div');
 				assert.equal(vnode.children![0].text, 'other text');
 
 			},
@@ -180,14 +180,14 @@ registerSuite({
 
 				projector.append();
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'h2');
+				assert.equal(vnode.sel, 'h2');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = undefined;
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'h2');
+				assert.equal(vnode.sel, 'h2');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 			},
@@ -197,9 +197,9 @@ registerSuite({
 
 				projector.append();
 				let vnode: any = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.lengthOf(vnode.children, 1);
-				assert.strictEqual(vnode.children[0].vnodeSelector, 'h2');
+				assert.strictEqual(vnode.children[0].sel, 'h2');
 				assert.strictEqual(vnode.children[0].text, 'my string');
 			}
 		},
@@ -273,17 +273,17 @@ registerSuite({
 
 				projector.replace(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.equal(vnode.text, result);
 				assert.isUndefined(vnode.children);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 1);
-				assert.equal(vnode.children![0].vnodeSelector, 'div');
+				assert.equal(vnode.children![0].sel, 'div');
 				assert.equal(vnode.children![0].text, 'other text');
 			},
 			'string root node after an initial render'() {
@@ -294,14 +294,14 @@ registerSuite({
 
 				projector.replace(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'div');
+				assert.equal(vnode.sel, 'div');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = 'other text';
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'div');
+				assert.equal(vnode.sel, 'div');
 				assert.equal(vnode.text, 'other text');
 				assert.isUndefined(vnode.children);
 			},
@@ -313,17 +313,17 @@ registerSuite({
 
 				projector.replace(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 1);
-				assert.equal(vnode.children![0].vnodeSelector, 'div');
+				assert.equal(vnode.children![0].sel, 'div');
 				assert.equal(vnode.children![0].text, 'other text');
 
 			},
@@ -335,14 +335,14 @@ registerSuite({
 
 				projector.replace(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'h2');
+				assert.equal(vnode.sel, 'h2');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = null;
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'h2');
+				assert.equal(vnode.sel, 'h2');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 			},
@@ -354,17 +354,17 @@ registerSuite({
 
 				projector.replace(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 1);
-				assert.equal(vnode.children![0].vnodeSelector, 'div');
+				assert.equal(vnode.children![0].sel, 'div');
 				assert.equal(vnode.children![0].text, 'other text');
 
 			},
@@ -376,14 +376,14 @@ registerSuite({
 
 				projector.replace(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'h2');
+				assert.equal(vnode.sel, 'h2');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = undefined;
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'h2');
+				assert.equal(vnode.sel, 'h2');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 			},
@@ -395,9 +395,9 @@ registerSuite({
 
 				projector.replace(root);
 				let vnode: any = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'span');
+				assert.equal(vnode.sel, 'span');
 				assert.lengthOf(vnode.children, 1);
-				assert.strictEqual(vnode.children[0].vnodeSelector, 'h2');
+				assert.strictEqual(vnode.children[0].sel, 'h2');
 				assert.strictEqual(vnode.children[0].text, 'my string');
 			}
 		},
@@ -425,14 +425,14 @@ registerSuite({
 
 				projector.merge(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.equal(vnode.text, result);
 				assert.isUndefined(vnode.children);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.equal(vnode.text, 'other text');
 			},
 			'string root node after an initial render'() {
@@ -443,14 +443,14 @@ registerSuite({
 
 				projector.merge(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = 'other text';
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.equal(vnode.text, 'other text');
 				assert.isUndefined(vnode.children);
 			},
@@ -462,14 +462,14 @@ registerSuite({
 
 				projector.merge(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.equal(vnode.text, 'other text');
 				assert.isUndefined(vnode.children);
 			},
@@ -481,14 +481,14 @@ registerSuite({
 
 				projector.merge(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = null;
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 			},
@@ -500,14 +500,14 @@ registerSuite({
 
 				projector.merge(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 
 				result = v('div', [ 'other text' ]);
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.equal(vnode.text, 'other text');
 				assert.isUndefined(vnode.children);
 			},
@@ -519,14 +519,14 @@ registerSuite({
 
 				projector.merge(root);
 				let vnode: VNode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.equal(vnode.text, 'my string');
 				assert.isUndefined(vnode.children);
 
 				result = undefined;
 				projector.callInvalidate();
 				vnode = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.isUndefined(vnode.text);
 				assert.lengthOf(vnode.children, 0);
 			},
@@ -538,9 +538,9 @@ registerSuite({
 
 				projector.merge(root);
 				let vnode: any = projector.__render__() as VNode;
-				assert.equal(vnode.vnodeSelector, 'my-app');
+				assert.equal(vnode.sel, 'my-app');
 				assert.lengthOf(vnode.children, 1);
-				assert.strictEqual(vnode.children[0].vnodeSelector, 'h2');
+				assert.strictEqual(vnode.children[0].sel, 'h2');
 				assert.strictEqual(vnode.children[0].text, 'my string');
 			},
 			'pre rendered DOM used'() {
@@ -1019,4 +1019,4 @@ registerSuite({
 		projector.append();
 		assert.isTrue(afterCreateCalled);
 	}
-});
+});*/

@@ -128,8 +128,8 @@ registerSuite({
 			assert.isFunction(hNode.render);
 			assert.lengthOf(hNode.children, 0);
 			const render = hNode.render();
-			assert.equal(render.vnodeSelector, 'div');
-			assert.equal(render.properties && render.properties.innerHTML, 'Hello World');
+			assert.equal(render.sel, 'div');
+			assert.equal(render.data && render.data.props && render.data.props.innerHTML, 'Hello World');
 			assert.equal(hNode.type, HNODE);
 			assert.isTrue(isHNode(hNode));
 			assert.isFalse(isWNode(hNode));
@@ -162,9 +162,9 @@ registerSuite({
 			const classes = () => {
 				return { foo: true };
 			};
-			const hNode = v('div', { classes });
+			const hNode = v('div', { class: classes });
 			assert.deepEqual(hNode.properties, {
-				classes: {
+				class: {
 					foo: true
 				}
 			});

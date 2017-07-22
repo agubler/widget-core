@@ -1,13 +1,15 @@
 import { assign } from '@dojo/core/lang';
-import { VNode } from '@dojo/interfaces/vdom';
 import Symbol from '@dojo/shim/Symbol';
-import { h, VNodeProperties } from 'maquette';
+import { h } from 'snabbdom/h';
+import { VNode, VNodeData } from 'snabbdom/VNode';
 import {
 	Constructor,
 	DefaultWidgetBaseInterface,
 	DNode,
 	HNode,
+	LegacyVirtualDomProperties,
 	RegistryLabel,
+	VDomProperties,
 	VirtualDomProperties,
 	WidgetBaseInterface,
 	WNode
@@ -36,6 +38,10 @@ export function isWNode<W extends WidgetBaseInterface = DefaultWidgetBaseInterfa
  */
 export function isHNode(child: DNode): child is HNode {
 	return Boolean(child && (typeof child !== 'string') && child.type === HNODE);
+}
+
+export function isVirtualDomProperties(node: any): node is VDomProperties {
+	return Boolean(node.props || node.class || node.hooks || node.style || node.on);
 }
 
 /**
@@ -83,6 +89,52 @@ export function w<W extends WidgetBaseInterface>(widgetConstructor: Constructor<
 	};
 }
 
+function mapLegacyProperties(properties: LegacyVirtualDomProperties): VDomProperties {
+	let { classes, styles, key, ...props } = properties;
+	const mappedProperties: VDomProperties = { };
+	if (classes) {
+		if (typeof classes === 'function') {
+			classes = classes();
+		}
+		mappedProperties.class = classes;
+	}
+	if (styles) {
+		mappedProperties.style = styles;
+	}
+	if (key) {
+		mappedProperties.key = key;
+	}
+
+	return Object.keys(props).reduce((mappedProperties, propertyName) => {
+		if (propertyName.substr(0, 2) === 'on') {
+			const eventName = propertyName.substr(2);
+			if (!mappedProperties.on) {
+				mappedProperties.on = {};
+			}
+			mappedProperties.on[eventName] = props[propertyName];
+		}
+		else if ('afterCreate' === propertyName) {
+			if (!mappedProperties.hook) {
+				mappedProperties.hook = {};
+			}
+			mappedProperties.hook.insert = props[propertyName];
+		}
+		else if ('afterUpdate' === propertyName) {
+			if (!mappedProperties.hook) {
+				mappedProperties.hook = {};
+			}
+			mappedProperties.hook.update = props[propertyName];
+		}
+		else {
+			if (!mappedProperties.props) {
+				mappedProperties.props = {};
+			}
+			mappedProperties.props[propertyName] = props[propertyName];
+		}
+		return mappedProperties;
+	}, mappedProperties);
+}
+
 /**
  * Wrapper function for calls to create hyperscript, lazily executes the hyperscript creation
  */
@@ -90,29 +142,38 @@ export function v(tag: string, properties: VirtualDomProperties, children?: DNod
 export function v(tag: string, children: DNode[]): HNode;
 export function v(tag: string): HNode;
 export function v(tag: string, propertiesOrChildren: VirtualDomProperties | DNode[] = {}, children: DNode[] = []): HNode {
-		let properties: VirtualDomProperties = propertiesOrChildren;
+	let properties: VirtualDomProperties;
+	let finalProperties: VDomProperties;
 
-		if (Array.isArray(propertiesOrChildren)) {
-			children = propertiesOrChildren;
-			properties = {};
+	if (Array.isArray(propertiesOrChildren)) {
+		children = propertiesOrChildren;
+		properties = {};
+	}
+	else {
+		properties = propertiesOrChildren;
+	}
+
+	if (isVirtualDomProperties(properties)) {
+		let { class: classes } = properties;
+		if (typeof classes === 'function') {
+			classes = classes();
+			finalProperties = assign(properties, { class: classes });
 		}
-
-		if (properties) {
-			let { classes } = properties;
-			if (typeof classes === 'function') {
-				classes = classes();
-				properties = assign(properties, { classes });
-			}
+		else {
+			finalProperties = properties;
 		}
+	}
+	else {
+		finalProperties = mapLegacyProperties(properties);
+	}
 
-		return {
-			tag,
-			children,
-			properties,
-			render(this: { vNodes: VNode[], properties: VNodeProperties }) {
-
-				return h(tag, this.properties, this.vNodes);
-			},
-			type: HNODE
-		};
+	return {
+		tag,
+		children,
+		properties: finalProperties,
+		render(this: { vNodes: Array<VNode | null | undefined>, properties: VNodeData }) {
+			return h(tag, this.properties, this.vNodes);
+		},
+		type: HNODE
+	};
 }

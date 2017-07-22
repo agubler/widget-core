@@ -1,5 +1,4 @@
 import { Evented } from '@dojo/core/Evented';
-import { ProjectionOptions, VNodeProperties } from '@dojo/interfaces/vdom';
 import Map from '@dojo/shim/Map';
 import '@dojo/shim/Promise'; // Imported for side-effects
 import Set from '@dojo/shim/Set';
@@ -16,6 +15,7 @@ import {
 	RegistryLabel,
 	Render,
 	VirtualDomNode,
+	VNode,
 	WidgetMetaConstructor,
 	WidgetBaseConstructor,
 	WidgetBaseInterface,
@@ -24,6 +24,7 @@ import {
 import MetaBase from './meta/Base';
 import RegistryHandler from './RegistryHandler';
 import { isWidgetBaseConstructor, WIDGET_BASE_TYPE } from './WidgetRegistry';
+import { InsertHook, UpdateHook } from 'snabbdom/hooks';
 
 /**
  * Widget cache wrapper for instance management
@@ -183,9 +184,13 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 	private _metaMap = new WeakMap<WidgetMetaConstructor<any>, MetaBase>();
 
-	private _nodeMap = new Map<string, HTMLElement>();
+	private _nodeMap = new Map<string | number, HTMLElement>();
 
 	private _requiredNodes = new Set<string>();
+
+	private _boundAfterCreate: InsertHook;
+
+	private _boundAfterUpdate: UpdateHook;
 
 	/**
 	 * @constructor
@@ -202,6 +207,8 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		this._bindFunctionPropertyMap = new WeakMap<(...args: any[]) => any, { boundFunc: (...args: any[]) => any, scope: any }>();
 		this._registries = new RegistryHandler();
 		this._registries.add(registry);
+		this._boundAfterCreate = this._afterCreateCallback.bind(this);
+		this._boundAfterUpdate = this._afterUpdateCallback.bind(this);
 		this.own(this._registries);
 
 		this.own(this._registries.on('invalidate', this.invalidate.bind(this)));
@@ -251,8 +258,11 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		// with "key" properties.
 
 		decorate(node, (node: HNode) => {
-			node.properties.afterCreate = this._afterCreateCallback;
-			node.properties.afterUpdate = this._afterUpdateCallback;
+			if (!node.properties.hook) {
+				node.properties.hook = {};
+			}
+			node.properties.hook.insert = this._boundAfterCreate;
+			node.properties.hook.update = this._boundAfterUpdate;
 		}, isHNodeWithKey);
 
 		return node;
@@ -274,27 +284,26 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	/**
 	 * vnode afterCreate callback that calls the onElementCreated lifecycle method.
 	 */
-	private _afterCreateCallback(
-		element: Element,
-		projectionOptions: ProjectionOptions,
-		vnodeSelector: string,
-		properties: VNodeProperties
-	): void {
-		this._setNode(element, properties);
-		this.onElementCreated(element, String(properties.key));
+	private _afterCreateCallback(vNode: VNode): void {
+		const { elm, key }: { elm: HTMLElement, key: string } = vNode as any;
+		if (!elm) {
+			return;
+		}
+		this._setNode(elm, key);
+		this.onElementCreated(elm, key);
 	}
 
 	/**
 	 * vnode afterUpdate callback that calls the onElementUpdated lifecycle method.
 	 */
-	private _afterUpdateCallback(
-		element: Element,
-		projectionOptions: ProjectionOptions,
-		vnodeSelector: string,
-		properties: VNodeProperties
-	): void {
-		this._setNode(element, properties);
-		this.onElementUpdated(element, String(properties.key));
+	private _afterUpdateCallback(oldVNode: VNode, vNode: VNode): void {
+		this._afterCreateCallback(vNode);
+		const { elm, key }: { elm: HTMLElement, key: string } = vNode as any;
+		if (!elm) {
+			return;
+		}
+		this._setNode(elm, key);
+		this.onElementUpdated(elm, key);
 	}
 
 	/**
@@ -303,7 +312,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	 * @param element The dom node represented by the vdom node.
 	 * @param key The vdom node's key.
 	 */
-	protected onElementCreated(element: Element, key: string): void {
+	protected onElementCreated(element: HTMLElement, key: string | number): void {
 		// Do nothing by default.
 	}
 
@@ -315,12 +324,12 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	 * @param element The dom node represented by the vdom node.
 	 * @param key The vdom node's key.
 	 */
-	protected onElementUpdated(element: Element, key: string): void {
+	protected onElementUpdated(element: HTMLElement, key: string | number): void {
 		// Do nothing by default.
 	}
 
-	private _setNode(element: Element, properties: VNodeProperties): void {
-		this._nodeMap.set(String(properties.key), <HTMLElement> element);
+	private _setNode(element: HTMLElement, key: string | number): void {
+		this._nodeMap.set(key, element);
 	}
 
 	public get properties(): Readonly<P> & Readonly<WidgetProperties> {

@@ -1,4 +1,3 @@
-import { VNode } from '@dojo/interfaces/vdom';
 import Promise from '@dojo/shim/Promise';
 import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
@@ -142,8 +141,8 @@ registerSuite({
 	},
 	'Applies div as default tag'() {
 			const widget = new WidgetBase();
-			const renderedWidget = <VNode> (<any> widget).__render__();
-			assert.deepEqual(renderedWidget.vnodeSelector, 'div');
+			const renderedWidget = (<any> widget).__render__();
+			assert.deepEqual(renderedWidget.sel, 'div');
 	},
 	diffProperty: {
 		'decorator': {
@@ -559,24 +558,24 @@ registerSuite({
 			widget.__setChildren__([v('baz', { baz: 'qux' })]);
 			widget.__setProperties__({ foo: 'bar' });
 			const qux: any = widget.__render__();
-			assert.equal(qux.vnodeSelector, 'qux');
-			assert.deepEqual(qux.properties, { bind: widget, bar: 'foo', foo: 'bar' });
+			assert.equal(qux.sel, 'qux');
+			assert.deepEqual(qux.data, { bind: widget, props: { bar: 'foo', foo: 'bar' } });
 			assert.lengthOf(qux.children, 1);
 			const bar = qux.children[0];
-			assert.equal(bar.vnodeSelector, 'bar');
-			assert.deepEqual(bar.properties, { bind: widget, foo: 'bar' });
+			assert.equal(bar.sel, 'bar');
+			assert.deepEqual(bar.data, { bind: widget, props: { foo: 'bar' } });
 			assert.lengthOf(bar.children, 2);
 			const foo = bar.children[0];
-			assert.equal(foo.vnodeSelector, 'foo');
-			assert.deepEqual(foo.properties, { bind: widget });
+			assert.equal(foo.sel, 'foo');
+			assert.deepEqual(foo.data, { bind: widget });
 			assert.lengthOf(foo.children, 1);
 			const baz1 = foo.children[0];
-			assert.equal(baz1.vnodeSelector, 'baz');
-			assert.deepEqual(baz1.properties, { bind: widget, baz: 'qux' });
+			assert.equal(baz1.sel, 'baz');
+			assert.deepEqual(baz1.data, { bind: widget, props: { baz: 'qux' } });
 			assert.lengthOf(baz1.children, 0);
 			const baz2 = bar.children[1];
-			assert.equal(baz2.vnodeSelector, 'baz');
-			assert.deepEqual(baz2.properties, { bind: widget, baz: 'qux' });
+			assert.equal(baz2.sel, 'baz');
+			assert.deepEqual(baz2.data, { bind: widget, props: { baz: 'qux' } });
 			assert.lengthOf(baz2.children, 0);
 		},
 		'class level decorator'() {
@@ -605,7 +604,7 @@ registerSuite({
 			}
 
 			const widget = new TestWidget();
-			const vNode = <VNode> widget.__render__();
+			const vNode = widget.__render__();
 			assert.strictEqual(vNode, 'first render');
 			assert.isTrue(consoleStub.calledOnce);
 			assert.isTrue(consoleStub.calledWith('Render function not returned from beforeRender, using previous render'));
@@ -743,9 +742,9 @@ registerSuite({
 			}
 
 			const widget: any = new TestWidget();
-			const result = <VNode> widget.__render__();
+			const result = widget.__render__();
 			assert.lengthOf(result.children, 1);
-			assert.strictEqual(result.children && result.children[0].vnodeSelector, 'header');
+			assert.strictEqual(result.children && result.children[0].sel, 'header');
 		},
 		'lazily defined widget in registry renders when ready'() {
 			class TestWidget extends WidgetBase<any> {
@@ -762,11 +761,12 @@ registerSuite({
 				}
 			}
 			const myWidget: any = new TestWidget();
-			let result = <VNode> myWidget.__render__();
-			assert.lengthOf(result.children, 0);
+			let result = myWidget.__render__();
+			assert.deepEqual(result.children, [ null ]);
 			registry.define('my-header3', TestHeaderWidget);
 			result = myWidget.__render__();
 			assert.lengthOf(result.children, 1);
+			assert.strictEqual(result.children[0].sel, 'header');
 		},
 		'lazily defined widget using a symbol in registry renders when ready'() {
 			const myHeader = Symbol();
@@ -784,11 +784,12 @@ registerSuite({
 				}
 			}
 			const myWidget: any = new TestWidget();
-			let result = <VNode> myWidget.__render__();
-			assert.lengthOf(result.children, 0);
+			let result = myWidget.__render__();
+			assert.lengthOf(result.children, 1);
+			assert.isNull(result.children[0]);
 			registry.define(myHeader, TestHeaderWidget);
 			result = myWidget.__render__();
-			assert.lengthOf(result.children, 1);
+			assert.strictEqual(result.children[0].sel, 'header');
 		},
 		'locally defined widget in registry eventually replaces global one'() {
 			const localRegistry = new WidgetRegistry();
@@ -819,10 +820,10 @@ registerSuite({
 			registry.define('my-header4', TestHeaderWidget);
 			const myWidget: any = new TestWidget();
 			let result = <any> myWidget.__render__();
-			assert.equal(result.children[0].vnodeSelector, 'global-header');
+			assert.equal(result.children[0].sel, 'global-header');
 			localRegistry.define('my-header4', TestHeaderLocalWidget);
 			result = <any> myWidget.__render__();
-			assert.equal(result.children[0].vnodeSelector, 'local-header');
+			assert.equal(result.children[0].sel, 'local-header');
 		},
 		'async factories only initialise once'() {
 			let resolveFunction: any;
@@ -836,7 +837,7 @@ registerSuite({
 			class TestWidget extends WidgetBase<any> {
 				render() {
 					return v('div', [
-						w('my-header', <any> undefined)
+						w('my-header', {})
 					]);
 				}
 			}
@@ -854,8 +855,9 @@ registerSuite({
 				invalidateCount++;
 			});
 
-			let result = <VNode> myWidget.__render__();
-			assert.lengthOf(result.children, 0);
+			let result = myWidget.__render__();
+			assert.lengthOf(result.children, 1);
+			assert.isNull(result.children[0]);
 
 			myWidget.invalidate();
 			myWidget.__render__();
@@ -867,9 +869,9 @@ registerSuite({
 			const promise = new Promise((resolve) => setTimeout(resolve, 100));
 			return promise.then(() => {
 				assert.equal(invalidateCount, 3);
-				result = <VNode> myWidget.__render__();
+				result = myWidget.__render__();
 				assert.lengthOf(result.children, 1);
-				assert.strictEqual(result.children![0].vnodeSelector, 'header');
+				assert.strictEqual(result.children![0].sel, 'header');
 			});
 		},
 		'render with async factory'() {
@@ -897,15 +899,16 @@ registerSuite({
 
 			const myWidget: any = new TestWidget();
 
-			let result = <VNode> myWidget.__render__();
-			assert.lengthOf(result.children, 0);
+			let result = myWidget.__render__();
+			assert.lengthOf(result.children, 1);
+			assert.isNull(result.children[0]);
 
 			resolveFunction(TestHeaderWidget);
 			return new Promise((resolve) => {
 				myWidget.on('invalidated', () => {
-					result = <VNode> myWidget.__render__();
+					result = myWidget.__render__();
 					assert.lengthOf(result.children, 1);
-					assert.strictEqual(result.children![0].vnodeSelector, 'header');
+					assert.strictEqual(result.children![0].sel, 'header');
 					resolve();
 				});
 			});
@@ -935,9 +938,9 @@ registerSuite({
 
 			const myWidget: any = new TestWidget();
 
-			let result = <VNode> myWidget.__render__();
+			let result = myWidget.__render__();
 			assert.lengthOf(result.children, 1);
-			assert.strictEqual(result.children![0].vnodeSelector, 'header');
+			assert.strictEqual(result.children![0].sel, 'header');
 		},
 		'render with nested children'() {
 			class TestWidget extends WidgetBase<any> {
@@ -951,10 +954,10 @@ registerSuite({
 			}
 
 			const widget: any = new TestWidget();
-			const result = <VNode> widget.__render__();
+			const result = widget.__render__();
 			assert.lengthOf(result.children, 1);
-			assert.strictEqual(result.children![0].vnodeSelector, 'header');
-			assert.strictEqual(result.children![0].children![0].vnodeSelector, 'section');
+			assert.strictEqual(result.children![0].sel, 'header');
+			assert.strictEqual(result.children![0].children![0].sel, 'section');
 		},
 		'render with a text node children'() {
 			class TestWidget extends WidgetBase<any> {
@@ -964,9 +967,8 @@ registerSuite({
 			}
 
 			const widget: any = new TestWidget();
-			const result = <VNode> widget.__render__();
-			assert.isUndefined(result.children);
-			assert.equal(result.text, 'I am a text node');
+			const result = widget.__render__();
+			assert.equal(result.children[0].text, 'I am a text node');
 		},
 		'render returns array'() {
 			class TestChildWidget extends WidgetBase {
@@ -986,11 +988,11 @@ registerSuite({
 
 			const widget = new TestWidget();
 			const result: any = widget.__render__();
-			assert.strictEqual(result.vnodeSelector, 'div');
+			assert.strictEqual(result.sel, 'div');
 			assert.lengthOf(result.children, 2);
-			assert.strictEqual(result.children![0].vnodeSelector, 'div');
-			assert.strictEqual(result.children![0].text, 'text');
-			assert.strictEqual(result.children![1].vnodeSelector, 'span');
+			assert.strictEqual(result.children![0].sel, 'div');
+			assert.strictEqual(result.children![0].children[0].text, 'text');
+			assert.strictEqual(result.children![1].sel, 'span');
 			assert.strictEqual(result.children![1].properties.key, 'span');
 		},
 		'instance gets passed to VNodeProperties as bind to widget and all children'() {
@@ -1005,11 +1007,11 @@ registerSuite({
 			}
 
 			const widget: any = new TestWidget();
-			const result = <VNode> widget.__render__();
+			const result = widget.__render__();
 			assert.lengthOf(result.children, 1);
-			assert.strictEqual(result.properties!.bind, widget);
-			assert.strictEqual(result.children![0].properties!.bind, widget);
-			assert.strictEqual(result.children![0].children![0].properties!.bind, widget);
+			assert.strictEqual(result.data.bind, widget);
+			assert.strictEqual(result.children![0].data.bind, widget);
+			assert.strictEqual(result.children![0].children![0].data.bind, widget);
 		},
 		'render with multiple text node children'() {
 			class TestWidget extends WidgetBase<any> {
@@ -1019,7 +1021,7 @@ registerSuite({
 			}
 
 			const widget: any = new TestWidget();
-			const result = <VNode> widget.__render__();
+			const result = widget.__render__();
 			assert.isUndefined(result.text);
 			assert.lengthOf(result.children, 2);
 			assert.strictEqual(result.children![0].text, 'I am a text node');
@@ -1059,26 +1061,26 @@ registerSuite({
 			}
 
 			const widget: any = new TestWidget();
-			const firstRenderResult = <VNode> widget.__render__();
+			const firstRenderResult = widget.__render__();
 			assert.strictEqual(countWidgetCreated, 4);
 			assert.strictEqual(countWidgetDestroyed, 0);
 			assert.lengthOf(firstRenderResult.children, 4);
 			const firstRenderChild: any = firstRenderResult.children && firstRenderResult.children[0];
-			assert.strictEqual(firstRenderChild.vnodeSelector, 'footer');
+			assert.strictEqual(firstRenderChild.sel, 'footer');
 
 			widget.invalidate();
 
-			const secondRenderResult = <VNode> widget.__render__();
+			const secondRenderResult = widget.__render__();
 			assert.strictEqual(countWidgetCreated, 4);
 			assert.strictEqual(countWidgetDestroyed, 0);
 			assert.lengthOf(secondRenderResult.children, 4);
 			const secondRenderChild: any = secondRenderResult.children && secondRenderResult.children[0];
-			assert.strictEqual(secondRenderChild.vnodeSelector, 'footer');
+			assert.strictEqual(secondRenderChild.sel, 'footer');
 
 			widget.__setProperties__(<any> { hide: true });
 			widget.invalidate();
 
-			const thirdRenderResult = <VNode> widget.__render__();
+			const thirdRenderResult = widget.__render__();
 			assert.strictEqual(countWidgetCreated, 4);
 			assert.strictEqual(countWidgetDestroyed, 4);
 			assert.lengthOf(thirdRenderResult.children, 0);
@@ -1086,12 +1088,12 @@ registerSuite({
 			widget.__setProperties__(<any> { hide: false });
 			widget.invalidate();
 
-			const lastRenderResult = <VNode> widget.__render__();
+			const lastRenderResult = widget.__render__();
 			assert.strictEqual(countWidgetCreated, 8);
 			assert.strictEqual(countWidgetDestroyed, 4);
 			assert.lengthOf(lastRenderResult.children, 4);
 			const lastRenderChild: any = lastRenderResult.children && lastRenderResult.children[0];
-			assert.strictEqual(lastRenderChild.vnodeSelector, 'footer');
+			assert.strictEqual(lastRenderChild.sel, 'footer');
 		},
 		'render with multiple children of the same type without an id'() {
 			class TestWidgetOne extends WidgetBase<any> {}
@@ -1157,8 +1159,8 @@ registerSuite({
 		'__render__() and invalidate()'() {
 			const widgetBase: any = new WidgetBase();
 			widgetBase.__setProperties__({ id: 'foo', label: 'foo' });
-			const result1 = <VNode> widgetBase.__render__();
-			const result2 = <VNode> widgetBase.__render__();
+			const result1 = widgetBase.__render__();
+			const result2 = widgetBase.__render__();
 			widgetBase.invalidate();
 			const result3 = widgetBase.__render__();
 			const result4 = widgetBase.__render__();
@@ -1168,7 +1170,7 @@ registerSuite({
 			assert.notStrictEqual(result2, result4);
 			assert.deepEqual(result1, result3);
 			assert.deepEqual(result2, result4);
-			assert.strictEqual(result1.vnodeSelector, 'div');
+			assert.strictEqual(result1.sel, 'div');
 		},
 		'render multiple child widgets using the same factory'() {
 			let childWidgetInstantiatedCount = 0;

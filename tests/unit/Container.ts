@@ -124,6 +124,6 @@ registerSuite({
 		const widget = new TestWidgetContainer();
 		widget.__setProperties__({ foo: 'bar' });
 		const renderResult: any = widget.__render__();
-		assert.strictEqual(renderResult.vnodeSelector, 'test');
+		assert.strictEqual(renderResult.sel, 'test');
 	}
 });

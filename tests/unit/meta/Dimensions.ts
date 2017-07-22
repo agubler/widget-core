@@ -46,7 +46,7 @@ registerSuite({
 		document.body.appendChild(div);
 
 		const widget = new TestWidget();
-		widget.append(div);
+		widget.attach(div);
 
 		resolveRAF();
 
@@ -98,7 +98,7 @@ registerSuite({
 		document.body.appendChild(div);
 
 		const widget = new TestWidget();
-		widget.append(div);
+		widget.attach(div);
 		resolveRAF();
 		assert.isFalse(widget.getDimensions());
 	},
@@ -124,7 +124,7 @@ registerSuite({
 		document.body.appendChild(div);
 
 		const widget = new TestWidget();
-		widget.append(div);
+		widget.attach(div);
 		resolveRAF();
 
 		assert.isTrue(widget.getDimensions());

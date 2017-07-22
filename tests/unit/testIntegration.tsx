@@ -38,7 +38,7 @@ registerSuite({
 		const bar = new Bar();
 		const barRender = bar.__render__() as VNode;
 		const barChild = barRender.children![0];
-		assert.equal(barRender.vnodeSelector, 'header');
+		assert.equal(barRender.sel, 'header');
 		assert.equal(barChild.text, 'world');
 
 		const qux = new Qux();
@@ -48,7 +48,7 @@ registerSuite({
 		registry.define('LazyFoo', Foo);
 		const secondQuxRender = qux.__render__() as VNode;
 		const secondQuxChild = secondQuxRender.children![0];
-		assert.equal(secondQuxRender.vnodeSelector, 'header');
+		assert.equal(secondQuxRender.sel, 'header');
 		assert.equal(secondQuxChild.text, 'cool');
 	}
 });
