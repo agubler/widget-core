@@ -4,7 +4,7 @@ import Map from '@dojo/shim/Map';
 import Promise from '@dojo/shim/Promise';
 import Set from '@dojo/shim/Set';
 import WeakMap from '@dojo/shim/WeakMap';
-import { decorate, isHNode, isWNode, registry, v } from './d';
+import { isWNode, registry, v } from './d';
 import { auto, reference } from './diff';
 import {
 	AfterRender,
@@ -12,7 +12,6 @@ import {
 	DiffPropertyFunction,
 	DiffPropertyReaction,
 	DNode,
-	HNode,
 	RegistryLabel,
 	Render,
 	VirtualDomNode,
@@ -53,6 +52,8 @@ interface ReactionFunctionConfig {
 }
 
 const decoratorMap = new Map<Function, Map<string, any[]>>();
+
+const decoratorNameSet = new Set<string>();
 
 /**
  * Decorator that can be used to register a function to run as an aspect to `render`
@@ -110,13 +111,6 @@ export function handleDecorator(handler: (target: any, propertyKey?: string) => 
 			handler(target, propertyKey);
 		}
 	};
-}
-
-/**
- * Function that identifies DNodes that are HNodes with key properties.
- */
-function isHNodeWithKey(node: DNode): node is HNode {
-	return isHNode(node) && (node.properties != null) && (node.properties.key != null);
 }
 
 /**
@@ -185,6 +179,12 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 	private _requiredNodes = new Set<string>();
 
+	private _boundInvalidate: () => void;
+
+	private _boundBuildDecoratorList: (decoratorName: string) => void;
+
+	private boundRender: Render;
+
 	/**
 	 * @constructor
 	 */
@@ -201,8 +201,12 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		this._registries = new RegistryHandler();
 		this._registries.add(registry);
 		this.own(this._registries);
+		this._boundInvalidate = this.invalidate.bind(this);
+		this._boundBuildDecoratorList = this._buildDecoratorList.bind(this);
+		this.boundRender = this.render.bind(this);
+		this._eagarlyBuildDecoratorList();
 
-		this.own(this._registries.on('invalidate', this.invalidate.bind(this)));
+		this.own(this._registries.on('invalidate', this._boundInvalidate));
 		this._checkOnElementUsage();
 	}
 
@@ -212,7 +216,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 			cached = new MetaType({
 				nodes: this._nodeMap,
 				requiredNodes: this._requiredNodes,
-				invalidate: this.invalidate.bind(this)
+				invalidate: this._boundInvalidate
 			});
 			this._metaMap.set(MetaType, cached);
 		}
@@ -225,7 +229,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	 * 'meta' calls in this render,
 	 */
 	@beforeRender()
-	protected verifyRequiredNodes(renderFunc: () => DNode, properties: WidgetProperties, children: DNode[]): () => DNode {
+	protected verifyRequiredNodes(renderFunc: Render, properties: WidgetProperties, children: DNode[]): Render {
 		return () => {
 			this._requiredNodes.forEach((element, key) => {
 				if (!this._nodeMap.has(key)) {
@@ -237,36 +241,6 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 			this._nodeMap.clear();
 			return dNodes;
 		};
-	}
-
-	/**
-	 * A render decorator that registers vnode callbacks for 'afterCreate' and
-	 * 'afterUpdate' that will in turn call lifecycle methods onElementCreated and onElementUpdated.
-	 */
-	@afterRender()
-	protected attachLifecycleCallbacks (node: DNode | DNode[]): DNode | DNode[] {
-		// Create vnode afterCreate and afterUpdate callback functions that will only be set on nodes
-		// with "key" properties.
-
-		decorate(node, (node: HNode) => {
-			node.properties.afterCreate = this._afterCreateCallback;
-			node.properties.afterUpdate = this._afterUpdateCallback;
-		}, isHNodeWithKey);
-
-		return node;
-	}
-
-	@afterRender()
-	protected decorateBind(node: DNode | DNode[]): DNode | DNode[] {
-		decorate(node, (node: any) => {
-			const { properties = {} }: { properties: { bind?: any } } = node;
-			if (!properties.bind) {
-				properties.bind = this;
-			}
-		}, (node: DNode) => {
-			return isHNode(node) || isWNode(node);
-		});
-		return node;
 	}
 
 	/**
@@ -328,22 +302,27 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	public __setProperties__(originalProperties: P): void {
 		const { bind, ...properties } = originalProperties as any;
 		const changedPropertyKeys: string[] = [];
-		const allProperties = new Set([...Object.keys(properties), ...Object.keys(this._properties)]);
+		const allProperties = Object.keys(properties).concat(Object.keys(this._properties));
+		const checkedProperties: string[] = [];
 		const diffPropertyResults: any = {};
 
 		this._renderState = WidgetRenderState.PROPERTIES;
-		this._bindFunctionProperties(properties, bind);
 
-		allProperties.forEach((propertyName) => {
+		for (let i = 0; i < allProperties.length; i++) {
+			const propertyName = allProperties[i];
+			if (checkedProperties.indexOf(propertyName) !== -1) {
+				continue;
+			}
 			const previousProperty = this._properties[propertyName];
-			const newProperty = properties[propertyName];
+			let newProperty = this._bindFunctionProperties(properties[propertyName], bind);
 			const diffFunctions: DiffPropertyFunction[] = this.getDecorator(`diffProperty:${propertyName}`);
 
 			if (diffFunctions.length === 0) {
 				diffFunctions.push(auto);
 			}
 
-			diffFunctions.forEach((diffFunction) => {
+			for (let i = 0; i < diffFunctions.length; i++) {
+				const diffFunction = diffFunctions[i];
 				const result = diffFunction.call(null, previousProperty, newProperty);
 				if (result.changed && changedPropertyKeys.indexOf(propertyName) === -1) {
 					changedPropertyKeys.push(propertyName);
@@ -351,14 +330,19 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 				if (propertyName in properties) {
 					diffPropertyResults[propertyName] = result.value;
 				}
-			});
-		});
-
-		this._mapDiffPropertyReactions(properties, changedPropertyKeys).forEach((args, reaction) => {
-			if (args.changed) {
-				reaction.call(this, args.previousProperties, args.newProperties);
 			}
-		});
+
+			checkedProperties.push(propertyName);
+		}
+
+		const reactions = this._mapDiffPropertyReactions(properties, changedPropertyKeys);
+		if (reactions.size > 0) {
+			reactions.forEach((args, reaction) => {
+				if (args.changed) {
+					reaction.call(this, args.previousProperties, args.newProperties);
+				}
+			});
+		}
 
 		this._properties = diffPropertyResults;
 
@@ -437,6 +421,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 			if (!specificDecoratorList) {
 				specificDecoratorList = [];
 				decoratorList.set(decoratorKey, specificDecoratorList);
+				decoratorNameSet.add(decoratorKey);
 			}
 			specificDecoratorList.push(...value);
 		}
@@ -474,6 +459,10 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		return allDecorators;
 	}
 
+	private _eagarlyBuildDecoratorList() {
+		decoratorNameSet.forEach(this._boundBuildDecoratorList);
+	}
+
 	/**
 	 * Function to retrieve decorator values
 	 *
@@ -495,24 +484,28 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 	private _mapDiffPropertyReactions(newProperties: any, changedPropertyKeys: string[]): Map<Function, ReactionFunctionArguments> {
 		const reactionFunctions: ReactionFunctionConfig[] = this.getDecorator('diffReaction');
+		const mappedReactions = new Map<Function, ReactionFunctionArguments>();
 
-		return reactionFunctions.reduce((reactionPropertyMap, { reaction, propertyName }) => {
-			let reactionArguments = reactionPropertyMap.get(reaction);
-			if (reactionArguments === undefined) {
-				reactionArguments = {
-					previousProperties: {},
-					newProperties: {},
-					changed: false
-				};
-			}
-			reactionArguments.previousProperties[propertyName] = this._properties[propertyName];
-			reactionArguments.newProperties[propertyName] = newProperties[propertyName];
-			if (changedPropertyKeys.indexOf(propertyName) !== -1) {
-				reactionArguments.changed = true;
-			}
-			reactionPropertyMap.set(reaction, reactionArguments);
-			return reactionPropertyMap;
-		}, new Map<Function, ReactionFunctionArguments>());
+		if (reactionFunctions.length > 0) {
+			return reactionFunctions.reduce((reactionPropertyMap, { reaction, propertyName }) => {
+				let reactionArguments = reactionPropertyMap.get(reaction);
+				if (reactionArguments === undefined) {
+					reactionArguments = {
+						previousProperties: {},
+						newProperties: {},
+						changed: false
+					};
+				}
+				reactionArguments.previousProperties[propertyName] = this._properties[propertyName];
+				reactionArguments.newProperties[propertyName] = newProperties[propertyName];
+				if (changedPropertyKeys.indexOf(propertyName) !== -1) {
+					reactionArguments.changed = true;
+				}
+				reactionPropertyMap.set(reaction, reactionArguments);
+				return reactionPropertyMap;
+			}, mappedReactions);
+		}
+		return mappedReactions;
 
 	}
 
@@ -521,21 +514,18 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	 *
 	 * @param properties properties to check for functions
 	 */
-	private _bindFunctionProperties(properties: any, bind: any): void {
-		Object.keys(properties).forEach((propertyKey) => {
-			const property = properties[propertyKey];
+	private _bindFunctionProperties(property: any, bind: any): any {
+		if (typeof property === 'function' && isWidgetBaseConstructor(property) === false) {
+			const bindInfo = this._bindFunctionPropertyMap.get(property) || {};
+			let { boundFunc, scope } = bindInfo;
 
-			if (typeof property === 'function' && !isWidgetBaseConstructor(property)) {
-				const bindInfo = this._bindFunctionPropertyMap.get(property) || {};
-				let { boundFunc, scope } = bindInfo;
-
-				if (!boundFunc || scope !== bind) {
-					boundFunc = property.bind(bind);
-					this._bindFunctionPropertyMap.set(property, { boundFunc, scope: bind });
-				}
-				properties[propertyKey] = boundFunc;
+			if (boundFunc === undefined || scope !== bind) {
+				boundFunc = property.bind(bind);
+				this._bindFunctionPropertyMap.set(property, { boundFunc, scope: bind });
 			}
-		});
+			return boundFunc;
+		}
+		return property;
 	}
 
 	protected getRegistries(): RegistryHandler {
@@ -548,14 +538,17 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	private _runBeforeRenders(): Render {
 		const beforeRenders = this.getDecorator('beforeRender');
 
-		return beforeRenders.reduce((render: Render, beforeRenderFunction: BeforeRender) => {
-			const updatedRender = beforeRenderFunction.call(this, render, this._properties, this._children);
-			if (!updatedRender) {
-				console.warn('Render function not returned from beforeRender, using previous render');
-				return render;
-			}
-			return updatedRender;
-		}, this.render.bind(this));
+		if (beforeRender.length > 0) {
+			return beforeRenders.reduce((render: Render, beforeRenderFunction: BeforeRender) => {
+				const updatedRender = beforeRenderFunction.call(this, render, this._properties, this._children);
+				if (!updatedRender) {
+					console.warn('Render function not returned from beforeRender, using previous render');
+					return render;
+				}
+				return updatedRender;
+			}, this.boundRender);
+		}
+		return this.render;
 	}
 
 	/**
@@ -566,9 +559,12 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	protected runAfterRenders(dNode: DNode | DNode[]): DNode | DNode[] {
 		const afterRenders = this.getDecorator('afterRender');
 
-		return afterRenders.reduce((dNode: DNode | DNode[], afterRenderFunction: AfterRender) => {
-			return afterRenderFunction.call(this, dNode);
-		}, dNode);
+		if (afterRenders.length > 0) {
+			dNode = afterRenders.reduce((dNode: DNode | DNode[], afterRenderFunction: AfterRender) => {
+				return afterRenderFunction.call(this, dNode);
+			}, dNode);
+		}
+		return dNode;
 	}
 
 	/**
@@ -591,7 +587,6 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 		if (isWNode(dNode)) {
 			const { children, properties = {} } = dNode;
-			const { key } = properties;
 
 			let { widgetConstructor } = dNode;
 			let child: WidgetBaseInterface<WidgetProperties>;
@@ -604,7 +599,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 				widgetConstructor = <WidgetBaseConstructor> item;
 			}
 
-			const childrenMapKey = key || widgetConstructor;
+			const childrenMapKey = properties.key || widgetConstructor;
 			let cachedChildren = this._cachedChildrenMap.get(childrenMapKey) || [];
 			let cachedChild: WidgetCacheWrapper | undefined;
 			cachedChildren.some((cachedChildWrapper) => {
@@ -614,6 +609,10 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 				}
 				return false;
 			});
+
+			if ((<any> properties).bind === undefined) {
+				(<any> properties).bind = this;
+			}
 
 			if (cachedChild) {
 				child = cachedChild.child;
@@ -646,11 +645,24 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 			return child.__render__();
 		}
 
-		dNode.vNodes = dNode.children
-		.filter((child) => child !== null && child !== undefined)
-		.map((child: DNode) => {
-			return this._dNodeToVNode(child);
-		});
+		const vNodes: (VirtualDomNode | VirtualDomNode[])[] = [];
+		for (let i = 0; i < dNode.children.length; i++) {
+			const child = dNode.children[i];
+			if (child === undefined || child === null) {
+				continue;
+			}
+			vNodes.push(this._dNodeToVNode(child));
+		}
+		dNode.vNodes = vNodes;
+
+		if (dNode.properties.key !== undefined) {
+			dNode.properties.afterCreate = this._afterCreateCallback;
+			dNode.properties.afterUpdate = this._afterUpdateCallback;
+		}
+
+		if (dNode.properties.bind === undefined) {
+			(<any> dNode).properties.bind = this;
+		}
 
 		return dNode.render();
 	}
