@@ -113,17 +113,8 @@ function mapLegacyProperties(properties: LegacyVirtualDomProperties): VDomProper
 			}
 			mappedProperties.on[eventName] = props[propertyName];
 		}
-		else if ('afterCreate' === propertyName) {
-			if (!mappedProperties.hook) {
-				mappedProperties.hook = {};
-			}
-			mappedProperties.hook.insert = props[propertyName];
-		}
-		else if ('afterUpdate' === propertyName) {
-			if (!mappedProperties.hook) {
-				mappedProperties.hook = {};
-			}
-			mappedProperties.hook.update = props[propertyName];
+		else if ('afterCreate' === propertyName || 'afterUpdate' === propertyName) {
+			console.warn(`Unable to map ${propertyName} property to the current hooks, please manually upgrade.`);
 		}
 		else {
 			if (!mappedProperties.props) {
