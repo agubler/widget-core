@@ -399,3 +399,32 @@ export interface BeforeRender {
 export interface AfterRender {
 	(dNode: DNode | DNode []): DNode | DNode[];
 }
+
+export interface ContextInterface<T = any> extends Evented {
+	get(): T;
+	set(context: T): void;
+}
+
+export interface GetProperties {
+	<P extends WidgetProperties>(inject: any, properties: P): any;
+}
+
+export interface GetChildren {
+	(inject: any, children: DNode[]): DNode[];
+}
+
+export interface InjectorConfig {
+	name: RegistryLabel;
+	getProperties?: GetProperties;
+	getChildren?: GetChildren;
+}
+
+export interface PropertyInjectorConfig {
+	name: RegistryLabel;
+	getProperties: GetProperties;
+}
+
+export interface ChildInjectorConfig {
+	name: RegistryLabel;
+	getChildren: GetChildren;
+}

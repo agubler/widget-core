@@ -47,22 +47,6 @@ registerSuite({
 		propertiesCalled = false;
 		assertRender = (properties: any) => {};
 	},
-	'container with default mappers'() {
-		assertRender = (properties: any) => {
-			const calculatedChildren = properties.getChildren();
-			const calculatedProperties = properties.getProperties();
-			assert.isFalse(childrenCalled);
-			assert.isFalse(propertiesCalled);
-			assert.deepEqual(calculatedProperties, {});
-			assert.deepEqual(calculatedChildren, []);
-			assert.deepEqual(properties.properties, { foo: 'bar', registry });
-			assert.deepEqual(properties.children, []);
-		};
-		const TestWidgetContainer = Container(TestWidget, 'test-state-1');
-		const widget = new TestWidgetContainer();
-		widget.__setProperties__({ foo: 'bar', registry });
-		widget.__render__();
-	},
 	'container with no default mappers'() {
 		assertRender = (properties: any) => {
 			properties.getChildren();
@@ -123,7 +107,7 @@ registerSuite({
 			assert.deepEqual(properties.children, []);
 		};
 
-		const TestWidgetContainer = Container<TestWidget>('test-widget', 'test-state-1');
+		const TestWidgetContainer = Container<TestWidget>('test-widget', 'test-state-1', { getProperties });
 		const widget = new TestWidgetContainer();
 		widget.__setProperties__({ foo: 'bar', registry });
 		const renderResult: any = widget.__render__();

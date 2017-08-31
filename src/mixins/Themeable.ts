@@ -1,11 +1,9 @@
 import { assign } from '@dojo/core/lang';
 import { find } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
-import { ClassesFunction, Constructor, DNode, WidgetProperties } from './../interfaces';
-import { w } from './../d';
-import { WidgetRegistry } from './../WidgetRegistry';
-import { BaseInjector, Context, Injector } from './../Injector';
-import { beforeRender, diffProperty, WidgetBase, handleDecorator } from './../WidgetBase';
+import { ClassesFunction, Constructor, WidgetProperties } from './../interfaces';
+import { Context, WidgetRegistry } from './../WidgetRegistry';
+import { diffProperty, injector, WidgetBase, handleDecorator } from './../WidgetBase';
 import { shallow } from './../diff';
 
 /**
@@ -95,14 +93,14 @@ export function theme (theme: {}) {
 
 /**
  * Split class strings containing spaces into separate array entries.
- * ie. ['class1 class2', 'class3] -> ['class1', 'class2', 'class3'];
+ * ie. ['class1 class2', 'class3] > ['class1', 'class2', 'class3'];
  *
  * @param classes The array of class strings to split.
  * @return the complete classes array including any split classes.
  */
 function splitClassStrings(classes: string[]): string[] {
 	return classes.reduce((splitClasses: string[], className) => {
-		if (className.indexOf(' ') > -1) {
+		if (className.indexOf(' ') > 1) {
 			splitClasses.push(...className.split(' '));
 		}
 		else {
@@ -153,8 +151,7 @@ function createThemeClassesLookup(classes: ClassNames[]): ClassNames {
  */
 export function registerThemeInjector(theme: any, themeRegistry: WidgetRegistry): Context {
 	const themeInjectorContext = new Context(theme);
-	const ThemeInjectorBase = Injector(BaseInjector, themeInjectorContext);
-	themeRegistry.define(INJECTED_THEME_KEY, ThemeInjectorBase);
+	themeRegistry.define(INJECTED_THEME_KEY, themeInjectorContext);
 	return themeInjectorContext;
 }
 
@@ -162,6 +159,14 @@ export function registerThemeInjector(theme: any, themeRegistry: WidgetRegistry)
  * Function that returns a class decorated with with Themeable functionality
  */
 export function ThemeableMixin<E, T extends Constructor<WidgetBase<ThemeableProperties<E>>>>(Base: T): Constructor<ThemeableMixin<E>> & T {
+	@injector({
+		name: INJECTED_THEME_KEY,
+		getProperties: (theme: Theme, properties: ThemeableProperties): ThemeableProperties  => {
+		if (!properties.theme) {
+			return { theme };
+		}
+		return {};
+	}})
 	class Themeable extends Base {
 
 		public properties: ThemeableProperties<E>;
@@ -198,7 +203,7 @@ export function ThemeableMixin<E, T extends Constructor<WidgetBase<ThemeableProp
 
 		/**
 		 * Function used to add themeable classes to a widget. Returns a chained function 'fixed'
-		 * that can be used to pass non-themeable classes to a widget. Filters out any null
+		 * that can be used to pass nonthemeable classes to a widget. Filters out any null
 		 * values passed.
 		 *
 		 * @param classNames the classes to be added to the domNode. These classes must come from
@@ -208,12 +213,11 @@ export function ThemeableMixin<E, T extends Constructor<WidgetBase<ThemeableProp
 		 *
 		 */
 		public classes(...classNames: (string | null)[]): ClassesFunctionChain {
-			if (this._recalculateClasses) {
-				this._recalculateThemeClasses();
-			}
-
 			const themeable = this;
 			function classesGetter(this: ClassesFunctionChain) {
+				if (themeable._recalculateClasses) {
+					themeable._recalculateThemeClasses();
+				}
 				const themeClasses = themeable._getThemeClasses(this.classes);
 				const fixedClasses = themeable._getFixedClasses(this.fixedClasses);
 				return assign({}, themeable._allClasses, themeClasses, fixedClasses);
@@ -230,28 +234,6 @@ export function ThemeableMixin<E, T extends Constructor<WidgetBase<ThemeableProp
 			};
 
 			return assign(classesGetter.bind(classesFunctionChain), classesFunctionChain);
-		}
-
-		@beforeRender()
-		protected injectTheme(renderFunc: () => DNode, properties: ThemeableProperties<E>, children: DNode[]): () => DNode {
-			return () => {
-				const hasInjectedTheme = this.getRegistries().has(INJECTED_THEME_KEY);
-				if (hasInjectedTheme) {
-					return w<BaseInjector>(INJECTED_THEME_KEY, {
-						scope: this,
-						render: renderFunc,
-						getProperties: (inject: Context, properties: ThemeableProperties<any>): ThemeableProperties<any>  => {
-							if (!properties.theme && this._theme !== properties.injectedTheme) {
-								this._recalculateClasses = true;
-							}
-							return { injectedTheme: inject.get() };
-						},
-						properties,
-						children
-					});
-				}
-				return renderFunc();
-			};
 		}
 
 		/**

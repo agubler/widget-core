@@ -1,7 +1,6 @@
 import { Evented } from '@dojo/core/Evented';
 import { ProjectionOptions, VNodeProperties } from '@dojo/interfaces/vdom';
 import Map from '@dojo/shim/Map';
-import '@dojo/shim/Promise'; // Imported for side-effects
 import Set from '@dojo/shim/Set';
 import WeakMap from '@dojo/shim/WeakMap';
 import { isWNode, v, isHNode } from './d';
@@ -9,9 +8,12 @@ import { auto, reference } from './diff';
 import {
 	AfterRender,
 	BeforeRender,
+	ChildInjectorConfig,
 	DiffPropertyFunction,
 	DiffPropertyReaction,
 	DNode,
+	InjectorConfig,
+	PropertyInjectorConfig,
 	RegistryLabel,
 	Render,
 	VirtualDomNode,
@@ -22,7 +24,7 @@ import {
 } from './interfaces';
 import MetaBase from './meta/Base';
 import RegistryHandler from './RegistryHandler';
-import { isWidgetBaseConstructor, WIDGET_BASE_TYPE, WidgetRegistry } from './WidgetRegistry';
+import { isWidgetBaseConstructor, isRegistryContext, WIDGET_BASE_TYPE, WidgetRegistry } from './WidgetRegistry';
 
 /**
  * Widget cache wrapper for instance management
@@ -74,6 +76,17 @@ export function beforeRender(): (target: any, propertyKey: string) => void;
 export function beforeRender(method?: Function) {
 	return handleDecorator((target, propertyKey) => {
 		target.addDecorator('beforeRender', propertyKey ? target[propertyKey] : method);
+	});
+}
+
+export function injector({ name, getChildren, getProperties }: InjectorConfig) {
+	return handleDecorator((target, propertyKey) => {
+		if (getChildren) {
+			target.addDecorator('childInjectors', { name, getChildren });
+		}
+		if (getProperties) {
+			target.addDecorator('propertyInjectors', { name, getProperties });
+		}
 	});
 }
 
@@ -144,7 +157,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	/**
 	 * internal widget properties
 	 */
-	private _properties: P & WidgetProperties & { [index: string]: any };
+	private _properties: P & WidgetProperties & { [index: string]: any } = {} as P;
 
 	/**
 	 * cached chldren map for instance management
@@ -182,6 +195,8 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 	private _defaultRegistry = new WidgetRegistry();
 
+	private _registeredInjectors: any[] = [];
+
 	/**
 	 * @constructor
 	 */
@@ -190,7 +205,6 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 		this._children = [];
 		this._decoratorCache = new Map<string, any[]>();
-		this._properties = <P> {};
 		this._cachedChildrenMap = new Map<string | Promise<WidgetBaseConstructor> | WidgetBaseConstructor, WidgetCacheWrapper[]>();
 		this._diffPropertyFunctionMap = new Map<string, string>();
 		this._bindFunctionPropertyMap = new WeakMap<(...args: any[]) => any, { boundFunc: (...args: any[]) => any, scope: any }>();
@@ -322,10 +336,27 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		}
 	}
 
-	public __setProperties__(originalProperties: this['properties']): void {
-		const { bind, ...properties } = originalProperties as any;
+	public __setProperties__(properties: this['properties']): void {
+		let { diffPropertyResults, changedPropertyKeys } = this._diffProperties(properties);
+		this._properties = diffPropertyResults;
+		const injectedProperties = this._injectProperties(properties);
+		if (injectedProperties) {
+			const {
+				diffPropertyResults: injectedDiffPropertyResults,
+				changedPropertyKeys: injectedChangedPropertyKeys
+			} = this._diffProperties(injectedProperties, false);
+			this._properties = { ...injectedDiffPropertyResults, ...(<any> this)._properties };
+			changedPropertyKeys = [ ...changedPropertyKeys, ...injectedChangedPropertyKeys ];
+		}
+		if (changedPropertyKeys.length > 0) {
+			this.invalidate();
+		}
+	}
+
+	private _diffProperties(originalProperties: any, diffMissingProperties: boolean = true): { diffPropertyResults: any, changedPropertyKeys: any[] } {
+		const { bind, ...properties }: any = originalProperties;
 		const changedPropertyKeys: string[] = [];
-		const allProperties = [ ...Object.keys(properties), ...Object.keys(this._properties) ];
+		const allProperties = [ ...Object.keys(properties), ...diffMissingProperties ? Object.keys(this._properties) : [] ];
 		const checkedProperties: string[] = [];
 		const diffPropertyResults: any = {};
 		const registeredDiffPropertyNames = this.getDecorator('registeredDiffProperty');
@@ -373,11 +404,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 			});
 		}
 
-		this._properties = diffPropertyResults;
-
-		if (changedPropertyKeys.length > 0) {
-			this.invalidate();
-		}
+		return { diffPropertyResults, changedPropertyKeys };
 	}
 
 	public get children(): (C | null)[] {
@@ -386,7 +413,8 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 	public __setChildren__(children: (C | null)[]): void {
 		this._renderState = WidgetRenderState.CHILDREN;
-		if (this._children.length > 0 || children.length > 0) {
+		const injectedChildren = this._injectChildren(children);
+		if (this._children.length > 0 || children.length > 0 || injectedChildren.length > 0) {
 			this._children = children;
 			this.invalidate();
 		}
@@ -608,6 +636,58 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 			}, dNode);
 		}
 		return dNode;
+	}
+
+	private _injectProperties(properties: this['properties']): this['properties'] {
+		const injectors: PropertyInjectorConfig[] = this.getDecorator('propertyInjectors');
+		let injectedProperties: any = {};
+		if (injectors.length > 0) {
+			for (let i = 0; i < injectors.length; i++) {
+				const { name, getProperties } = injectors[i];
+				const context = this._registries.get(name);
+
+				if (context === null) {
+					console.warn(`Unable find context ${name.toString()}`);
+					continue;
+				}
+				if (isRegistryContext(context)) {
+					if (this._registeredInjectors.indexOf(context) === -1) {
+						context.on('invalidate', this._boundInvalidate);
+						this._registeredInjectors.push(context);
+					}
+					injectedProperties = { ...injectedProperties, ...getProperties(context.get(), properties) };
+					continue;
+				}
+				console.warn(`Unable to inject using Widget found using ${name.toString()}`);
+			}
+		}
+		return injectedProperties;
+	}
+
+	private _injectChildren(children: DNode[]): DNode[] {
+		const injectors: ChildInjectorConfig[] = this.getDecorator('childInjectors');
+		let injectedChildren: DNode[] = [];
+		if (injectors.length > 0) {
+			for (let i = 0; i < injectors.length; i++) {
+				const { name, getChildren } = injectors[i];
+				const context = this._registries.get(name);
+
+				if (context === null) {
+					console.warn(`Unable find context ${name.toString()}`);
+					continue;
+				}
+				if (isRegistryContext(context)) {
+					if (this._registeredInjectors.indexOf(context) === -1) {
+						context.on('invalidate', this._boundInvalidate);
+						this._registeredInjectors.push(context);
+					}
+					injectedChildren = { ...injectedChildren, ...getChildren(context.get(), children) };
+					continue;
+				}
+				console.warn(`Unable to inject using Widget found using ${name.toString()}`);
+			}
+		}
+		return injectedChildren;
 	}
 
 	/**

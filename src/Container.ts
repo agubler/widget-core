@@ -1,40 +1,30 @@
-import { WidgetBase } from './WidgetBase';
-import {
-	Constructor,
-	DNode,
-	RegistryLabel,
-	WidgetBaseInterface,
-	WidgetProperties
-} from './interfaces';
+import { injector, WidgetBase } from './WidgetBase';
+import { Constructor, DNode, GetChildren, GetProperties, RegistryLabel } from './interfaces';
 import { w } from './d';
-import { BaseInjector, defaultMappers, Mappers } from './Injector';
+import { isWidgetBaseConstructor } from './WidgetRegistry';
 
-export type Container<T extends WidgetBaseInterface> = Constructor<WidgetBase<Partial<T['properties']> & WidgetProperties>>;
+export type Container<T extends WidgetBase> = Constructor<WidgetBase<Partial<T['properties']>>>;
 
-export function Container<W extends WidgetBaseInterface>(
+export function Container<W extends WidgetBase> (
 	component: Constructor<W> | RegistryLabel,
 	name: RegistryLabel,
-	mappers: Partial<Mappers> = defaultMappers
+	{ getProperties, getChildren }: { getProperties?: GetProperties, getChildren?: GetChildren }
 ): Container<W> {
-	const {
-		getProperties = defaultMappers.getProperties,
-		getChildren = defaultMappers.getChildren
-	} = mappers;
 
-	return class extends WidgetBase<any> {
-		protected render(): DNode {
-			const { properties, children } = this;
-
-			return w<BaseInjector<any>>(name, {
-				scope: this,
-				render: () => w(component, properties, children),
-				getProperties,
-				properties,
-				getChildren,
-				children
-			});
+	if (!isWidgetBaseConstructor(component)) {
+		@injector({ name, getProperties, getChildren })
+		class RegistryItemContainer extends WidgetBase<Partial<W['properties']>> {
+			protected render(): DNode {
+				return w(component, this.properties, this.children);
+			}
 		}
-	};
+		return RegistryItemContainer;
+	}
+
+	const Component: Constructor<WidgetBase<Partial<W['properties']>>> = component as any;
+	@injector({ name, getProperties, getChildren })
+	class WidgetContainer extends Component { }
+	return WidgetContainer;
 }
 
 export default Container;
