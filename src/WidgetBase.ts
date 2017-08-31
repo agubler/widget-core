@@ -415,7 +415,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		this._renderState = WidgetRenderState.CHILDREN;
 		const injectedChildren = this._injectChildren(children);
 		if (this._children.length > 0 || children.length > 0 || injectedChildren.length > 0) {
-			this._children = children;
+			this._children = [ ...children, ...injectedChildren ];
 			this.invalidate();
 		}
 	}
@@ -664,9 +664,9 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		return injectedProperties;
 	}
 
-	private _injectChildren(children: DNode[]): DNode[] {
+	private _injectChildren(children: (C | null)[]): (C | null)[] {
 		const injectors: ChildInjectorConfig[] = this.getDecorator('childInjectors');
-		let injectedChildren: DNode[] = [];
+		let injectedChildren: (C | null)[] = [];
 		if (injectors.length > 0) {
 			for (let i = 0; i < injectors.length; i++) {
 				const { name, getChildren } = injectors[i];

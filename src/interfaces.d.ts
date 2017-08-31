@@ -410,7 +410,7 @@ export interface GetProperties {
 }
 
 export interface GetChildren {
-	(inject: any, children: DNode[]): DNode[];
+	<C>(inject: any, children: C[]): C[];
 }
 
 export interface InjectorConfig {
