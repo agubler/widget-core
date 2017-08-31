@@ -114,7 +114,6 @@ registerSuite({
 		return promise.then(() => {
 			const RegistryWidget = registryHandler.get<TestWidget>('baz-1');
 			assert.equal(RegistryWidget, TestWidget);
-
 			const widget = new RegistryWidget!();
 
 			// demonstrate registry widget is typed as TestWidget
