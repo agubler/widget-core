@@ -8,12 +8,10 @@ import { auto, reference } from './diff';
 import {
 	AfterRender,
 	BeforeRender,
-	ChildInjectorConfig,
 	DiffPropertyFunction,
 	DiffPropertyReaction,
 	DNode,
-	InjectorConfig,
-	PropertyInjectorConfig,
+	InjectConfig,
 	RegistryLabel,
 	Render,
 	VirtualDomNode,
@@ -42,6 +40,15 @@ enum WidgetRenderState {
 	RENDER
 }
 
+enum Decorators {
+	CHILD_INJECTOR = 'childInjector',
+	PROPERTY_INJECTOR = 'propertyInjector',
+	AFTER_RENDER = 'afterRender',
+	BEFORE_RENDER = 'beforeRender',
+	REGISTERED_DIFF_PROPERTY = 'registeredDiffProperty',
+	DIFF_REACTION = 'diffReaction'
+}
+
 interface ReactionFunctionArguments {
 	previousProperties: any;
 	newProperties: any;
@@ -51,6 +58,11 @@ interface ReactionFunctionArguments {
 interface ReactionFunctionConfig {
 	propertyName: string;
 	reaction: DiffPropertyReaction;
+}
+
+interface Injector {
+	name: RegistryLabel;
+	injector: (inject: any, original: any) => any;
 }
 
 export type BoundFunctionData = { boundFunc: (...args: any[]) => any, scope: any };
@@ -64,7 +76,7 @@ export function afterRender(method: Function): (target: any) => void;
 export function afterRender(): (target: any, propertyKey: string) => void;
 export function afterRender(method?: Function) {
 	return handleDecorator((target, propertyKey) => {
-		target.addDecorator('afterRender', propertyKey ? target[propertyKey] : method);
+		target.addDecorator(Decorators.AFTER_RENDER, propertyKey ? target[propertyKey] : method);
 	});
 }
 
@@ -75,17 +87,17 @@ export function beforeRender(method: Function): (target: any) => void;
 export function beforeRender(): (target: any, propertyKey: string) => void;
 export function beforeRender(method?: Function) {
 	return handleDecorator((target, propertyKey) => {
-		target.addDecorator('beforeRender', propertyKey ? target[propertyKey] : method);
+		target.addDecorator(Decorators.BEFORE_RENDER, propertyKey ? target[propertyKey] : method);
 	});
 }
 
-export function injector({ name, getChildren, getProperties }: InjectorConfig) {
+export function inject({ name, getChildren, getProperties }: InjectConfig) {
 	return handleDecorator((target, propertyKey) => {
 		if (getChildren) {
-			target.addDecorator('childInjectors', { name, getChildren });
+			target.addDecorator(Decorators.CHILD_INJECTOR, { name, injector: getChildren });
 		}
 		if (getProperties) {
-			target.addDecorator('propertyInjectors', { name, getProperties });
+			target.addDecorator(Decorators.PROPERTY_INJECTOR, { name, injector: getProperties });
 		}
 	});
 }
@@ -100,9 +112,9 @@ export function injector({ name, getChildren, getProperties }: InjectorConfig) {
 export function diffProperty(propertyName: string, diffFunction: DiffPropertyFunction, reactionFunction?: Function) {
 	return handleDecorator((target, propertyKey) => {
 		target.addDecorator(`diffProperty:${propertyName}`, diffFunction.bind(null));
-		target.addDecorator('registeredDiffProperty', propertyName);
+		target.addDecorator(Decorators.REGISTERED_DIFF_PROPERTY, propertyName);
 		if (reactionFunction || propertyKey) {
-			target.addDecorator('diffReaction', {
+			target.addDecorator(Decorators.DIFF_REACTION, {
 				propertyName,
 				reaction: propertyKey ? target[propertyKey] : reactionFunction
 			});
@@ -359,7 +371,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		const allProperties = [ ...Object.keys(properties), ...diffMissingProperties ? Object.keys(this._properties) : [] ];
 		const checkedProperties: string[] = [];
 		const diffPropertyResults: any = {};
-		const registeredDiffPropertyNames = this.getDecorator('registeredDiffProperty');
+		const registeredDiffPropertyNames = this.getDecorator(Decorators.REGISTERED_DIFF_PROPERTY);
 		let runReactions = false;
 
 		this._renderState = WidgetRenderState.PROPERTIES;
@@ -558,7 +570,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	}
 
 	private _mapDiffPropertyReactions(newProperties: any, changedPropertyKeys: string[]): Map<Function, ReactionFunctionArguments> {
-		const reactionFunctions: ReactionFunctionConfig[] = this.getDecorator('diffReaction');
+		const reactionFunctions: ReactionFunctionConfig[] = this.getDecorator(Decorators.DIFF_REACTION);
 
 		return reactionFunctions.reduce((reactionPropertyMap, { reaction, propertyName }) => {
 			let reactionArguments = reactionPropertyMap.get(reaction);
@@ -607,7 +619,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	 * Run all registered before renders and return the updated render method
 	 */
 	private _runBeforeRenders(): Render {
-		const beforeRenders = this.getDecorator('beforeRender');
+		const beforeRenders = this.getDecorator(Decorators.BEFORE_RENDER);
 
 		if (beforeRenders.length > 0) {
 			return beforeRenders.reduce((render: Render, beforeRenderFunction: BeforeRender) => {
@@ -628,7 +640,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	 * @param dNode The DNodes to run through the after renders
 	 */
 	protected runAfterRenders(dNode: DNode | DNode[]): DNode | DNode[] {
-		const afterRenders = this.getDecorator('afterRender');
+		const afterRenders = this.getDecorator(Decorators.AFTER_RENDER);
 
 		if (afterRenders.length > 0) {
 			return afterRenders.reduce((dNode: DNode | DNode[], afterRenderFunction: AfterRender) => {
@@ -638,14 +650,18 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		return dNode;
 	}
 
-	private _injectProperties(properties: this['properties']): this['properties'] {
-		const injectors: PropertyInjectorConfig[] = this.getDecorator('propertyInjectors');
-		let injectedProperties: any = {};
+	/**
+	 * Run through all and execute the injectors against the original values
+	 *
+	 * @param injectors The injector functions to execute
+	 * @param original The original values for properties or children
+	 */
+	private _inject(injectors: Injector[], original: any): any {
+		let injected: any;
 		if (injectors.length > 0) {
 			for (let i = 0; i < injectors.length; i++) {
-				const { name, getProperties } = injectors[i];
+				const { name, injector } = injectors[i];
 				const context = this._registries.get(name);
-
 				if (context === null) {
 					console.warn(`Unable find context ${name.toString()}`);
 					continue;
@@ -655,39 +671,32 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 						context.on('invalidate', this._boundInvalidate);
 						this._registeredInjectors.push(context);
 					}
-					injectedProperties = { ...injectedProperties, ...getProperties(context.get(), properties) };
+					if (!injected) {
+						injected = injector(context.get(), original);
+					}
+					else {
+						if (Array.isArray(injected)) {
+							injected = [ ...injected, ...injector(context.get(), original) ];
+						}
+						else {
+							injected = { ...injected, ...injector(context.get(), original) };
+						}
+					}
 					continue;
 				}
-				console.warn(`Unable to inject using Widget found using ${name.toString()}`);
 			}
 		}
-		return injectedProperties;
+		return injected;
+	}
+
+	private _injectProperties(properties: this['properties']): this['properties'] {
+		const injectors: Injector[] = this.getDecorator(Decorators.PROPERTY_INJECTOR);
+		return this._inject(injectors, properties);
 	}
 
 	private _injectChildren(children: (C | null)[]): (C | null)[] {
-		const injectors: ChildInjectorConfig[] = this.getDecorator('childInjectors');
-		let injectedChildren: (C | null)[] = [];
-		if (injectors.length > 0) {
-			for (let i = 0; i < injectors.length; i++) {
-				const { name, getChildren } = injectors[i];
-				const context = this._registries.get(name);
-
-				if (context === null) {
-					console.warn(`Unable find context ${name.toString()}`);
-					continue;
-				}
-				if (isRegistryContext(context)) {
-					if (this._registeredInjectors.indexOf(context) === -1) {
-						context.on('invalidate', this._boundInvalidate);
-						this._registeredInjectors.push(context);
-					}
-					injectedChildren = { ...injectedChildren, ...getChildren(context.get(), children) };
-					continue;
-				}
-				console.warn(`Unable to inject using Widget found using ${name.toString()}`);
-			}
-		}
-		return injectedChildren;
+		const injectors: Injector[] = this.getDecorator(Decorators.CHILD_INJECTOR);
+		return this._inject(injectors, children) || [];
 	}
 
 	/**

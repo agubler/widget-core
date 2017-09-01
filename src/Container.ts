@@ -1,4 +1,4 @@
-import { injector, WidgetBase } from './WidgetBase';
+import { inject, WidgetBase } from './WidgetBase';
 import { Constructor, DNode, GetChildren, GetProperties, RegistryLabel } from './interfaces';
 import { w } from './d';
 import { isWidgetBaseConstructor } from './WidgetRegistry';
@@ -12,7 +12,7 @@ export function Container<W extends WidgetBase> (
 ): Container<W> {
 
 	if (!isWidgetBaseConstructor(component)) {
-		@injector({ name, getProperties, getChildren })
+		@inject({ name, getProperties, getChildren })
 		class RegistryItemContainer extends WidgetBase<Partial<W['properties']>> {
 			protected render(): DNode {
 				return w(component, this.properties, this.children);
@@ -22,7 +22,7 @@ export function Container<W extends WidgetBase> (
 	}
 
 	const Component: Constructor<WidgetBase<Partial<W['properties']>>> = component as any;
-	@injector({ name, getProperties, getChildren })
+	@inject({ name, getProperties, getChildren })
 	class WidgetContainer extends Component { }
 	return WidgetContainer;
 }

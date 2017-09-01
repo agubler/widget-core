@@ -3,7 +3,7 @@ import { find } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
 import { ClassesFunction, Constructor, WidgetProperties } from './../interfaces';
 import { Context, WidgetRegistry } from './../WidgetRegistry';
-import { diffProperty, injector, WidgetBase, handleDecorator } from './../WidgetBase';
+import { diffProperty, inject, WidgetBase, handleDecorator } from './../WidgetBase';
 import { shallow } from './../diff';
 
 /**
@@ -159,7 +159,7 @@ export function registerThemeInjector(theme: any, themeRegistry: WidgetRegistry)
  * Function that returns a class decorated with with Themeable functionality
  */
 export function ThemeableMixin<E, T extends Constructor<WidgetBase<ThemeableProperties<E>>>>(Base: T): Constructor<ThemeableMixin<E>> & T {
-	@injector({
+	@inject({
 		name: INJECTED_THEME_KEY,
 		getProperties: (theme: Theme, properties: ThemeableProperties): ThemeableProperties  => {
 		if (!properties.theme) {

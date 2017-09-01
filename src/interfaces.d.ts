@@ -413,18 +413,8 @@ export interface GetChildren {
 	<C>(inject: any, children: C[]): C[];
 }
 
-export interface InjectorConfig {
+export interface InjectConfig {
 	name: RegistryLabel;
 	getProperties?: GetProperties;
 	getChildren?: GetChildren;
-}
-
-export interface PropertyInjectorConfig {
-	name: RegistryLabel;
-	getProperties: GetProperties;
-}
-
-export interface ChildInjectorConfig {
-	name: RegistryLabel;
-	getChildren: GetChildren;
 }
