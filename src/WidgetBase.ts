@@ -8,6 +8,7 @@ import { auto, reference } from './diff';
 import {
 	AfterRender,
 	BeforeRender,
+	ContextInterface,
 	DiffPropertyFunction,
 	DiffPropertyReaction,
 	DNode,
@@ -60,8 +61,13 @@ interface ReactionFunctionConfig {
 	reaction: DiffPropertyReaction;
 }
 
+interface DiffPropertiesResult {
+	diffPropertyResults: any;
+	changedPropertyKeys: any[];
+}
+
 interface Injector {
-	name: RegistryLabel;
+	label: RegistryLabel;
 	injector: (inject: any, original: any) => any;
 }
 
@@ -94,10 +100,10 @@ export function beforeRender(method?: Function) {
 export function inject({ name, getChildren, getProperties }: InjectConfig) {
 	return handleDecorator((target, propertyKey) => {
 		if (getChildren) {
-			target.addDecorator(Decorators.CHILD_INJECTOR, { name, injector: getChildren });
+			target.addDecorator(Decorators.CHILD_INJECTOR, { label: name, injector: getChildren });
 		}
 		if (getProperties) {
-			target.addDecorator(Decorators.PROPERTY_INJECTOR, { name, injector: getProperties });
+			target.addDecorator(Decorators.PROPERTY_INJECTOR, { label: name, injector: getProperties });
 		}
 	});
 }
@@ -349,23 +355,20 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	}
 
 	public __setProperties__(properties: this['properties']): void {
-		let { diffPropertyResults, changedPropertyKeys } = this._diffProperties(properties);
+		const { diffPropertyResults, changedPropertyKeys } = this._diffProperties(properties);
 		this._properties = diffPropertyResults;
-		const injectedProperties = this._injectProperties(properties);
-		if (injectedProperties) {
-			const {
-				diffPropertyResults: injectedDiffPropertyResults,
-				changedPropertyKeys: injectedChangedPropertyKeys
-			} = this._diffProperties(injectedProperties, false);
-			this._properties = { ...injectedDiffPropertyResults, ...(<any> this)._properties };
-			changedPropertyKeys = [ ...changedPropertyKeys, ...injectedChangedPropertyKeys ];
+		const diffInjectedPropertiesResult = this._injectProperties(properties);
+
+		if (diffInjectedPropertiesResult) {
+			this._properties = { ...diffInjectedPropertiesResult.diffPropertyResults, ...diffPropertyResults };
+			changedPropertyKeys.push(diffInjectedPropertiesResult.changedPropertyKeys);
 		}
 		if (changedPropertyKeys.length > 0) {
 			this.invalidate();
 		}
 	}
 
-	private _diffProperties(originalProperties: any, diffMissingProperties: boolean = true): { diffPropertyResults: any, changedPropertyKeys: any[] } {
+	private _diffProperties(originalProperties: any, diffMissingProperties: boolean = true): DiffPropertiesResult {
 		const { bind, ...properties }: any = originalProperties;
 		const changedPropertyKeys: string[] = [];
 		const allProperties = [ ...Object.keys(properties), ...diffMissingProperties ? Object.keys(this._properties) : [] ];
@@ -650,6 +653,19 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		return dNode;
 	}
 
+	private _injectProperties(properties: this['properties']): DiffPropertiesResult | undefined {
+		const injectors: Injector[] = this.getDecorator(Decorators.PROPERTY_INJECTOR);
+		const injectedProperties = this._inject(injectors, properties);
+		if (injectedProperties !== undefined) {
+			return this._diffProperties(injectedProperties, false);
+		}
+	}
+
+	private _injectChildren(children: (C | null)[]): (C | null)[] {
+		const injectors: Injector[] = this.getDecorator(Decorators.CHILD_INJECTOR);
+		return this._inject(injectors, children) || [];
+	}
+
 	/**
 	 * Run through all and execute the injectors against the original values
 	 *
@@ -657,46 +673,33 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	 * @param original The original values for properties or children
 	 */
 	private _inject(injectors: Injector[], original: any): any {
-		let injected: any;
-		if (injectors.length > 0) {
-			for (let i = 0; i < injectors.length; i++) {
-				const { name, injector } = injectors[i];
-				const context = this._registries.get(name);
-				if (context === null) {
-					console.warn(`Unable find context ${name.toString()}`);
-					continue;
+		return injectors.reduce((injected, { label, injector }) => {
+			const context = this._registerInjectorContext(label);
+			if (context) {
+				const injectedValues = injector(context.get(), original);
+				if (injected === undefined) {
+					return injectedValues;
 				}
-				if (isRegistryContext(context)) {
-					if (this._registeredInjectors.indexOf(context) === -1) {
-						context.on('invalidate', this._boundInvalidate);
-						this._registeredInjectors.push(context);
-					}
-					if (!injected) {
-						injected = injector(context.get(), original);
-					}
-					else {
-						if (Array.isArray(injected)) {
-							injected = [ ...injected, ...injector(context.get(), original) ];
-						}
-						else {
-							injected = { ...injected, ...injector(context.get(), original) };
-						}
-					}
-					continue;
+				if (Array.isArray(injected)) {
+					injected = [ ...injected, ...injectedValues ];
+				}
+				else {
+					injected = { ...injected, ...injectedValues };
 				}
 			}
+			return injected;
+		}, undefined as any);
+	}
+
+	private _registerInjectorContext(label: RegistryLabel): ContextInterface | undefined {
+		const context = this._registries.get(label);
+		if (isRegistryContext(context)) {
+			if (this._registeredInjectors.indexOf(context) === -1) {
+				context.on('invalidate', this._boundInvalidate);
+				this._registeredInjectors.push(context);
+			}
+			return context;
 		}
-		return injected;
-	}
-
-	private _injectProperties(properties: this['properties']): this['properties'] {
-		const injectors: Injector[] = this.getDecorator(Decorators.PROPERTY_INJECTOR);
-		return this._inject(injectors, properties);
-	}
-
-	private _injectChildren(children: (C | null)[]): (C | null)[] {
-		const injectors: Injector[] = this.getDecorator(Decorators.CHILD_INJECTOR);
-		return this._inject(injectors, children) || [];
 	}
 
 	/**
