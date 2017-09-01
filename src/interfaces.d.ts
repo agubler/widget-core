@@ -406,7 +406,7 @@ export interface ContextInterface<T = any> extends Evented {
 }
 
 export interface GetProperties {
-	<P extends WidgetProperties>(inject: any, properties: object): object;
+	(inject: any, properties: object): object;
 }
 
 export interface GetChildren {
