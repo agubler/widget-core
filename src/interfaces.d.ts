@@ -406,11 +406,11 @@ export interface ContextInterface<T = any> extends Evented {
 }
 
 export interface GetProperties {
-	<P extends WidgetProperties>(inject: any, properties: P): any;
+	<P extends WidgetProperties>(inject: any, properties: object): object;
 }
 
 export interface GetChildren {
-	<C>(inject: any, children: C[]): C[];
+	(inject: any, children: DNode[]): DNode[];
 }
 
 export interface InjectConfig {

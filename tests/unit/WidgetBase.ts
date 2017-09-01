@@ -4,15 +4,16 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import { stub, spy, SinonStub } from 'sinon';
 import { v, w } from '../../src/d';
-import { Constructor, DNode, PropertyChangeRecord, Render } from '../../src/interfaces';
+import { Constructor, DNode, HNode, PropertyChangeRecord, Render } from '../../src/interfaces';
 import {
 	WidgetBase,
 	diffProperty,
 	afterRender,
-	beforeRender
+	beforeRender,
+	inject
 } from '../../src/WidgetBase';
 import { ignore, always, auto } from '../../src/diff';
-import WidgetRegistry, { WIDGET_BASE_TYPE } from './../../src/WidgetRegistry';
+import WidgetRegistry, { Context, WIDGET_BASE_TYPE } from './../../src/WidgetRegistry';
 import { ThemeableMixin } from './../../src/mixins/Themeable';
 
 interface TestProperties {
@@ -614,6 +615,147 @@ registerSuite({
 			assert.strictEqual(vNode, 'first render');
 			assert.isTrue(consoleStub.calledOnce);
 			assert.isTrue(consoleStub.calledWith('Render function not returned from beforeRender, using previous render'));
+		}
+	},
+	inject: {
+		'inject properties'() {
+			@inject({
+				name: 'test',
+				getProperties(inject: any, original: any) {
+					return { injected: true };
+				}
+			})
+			class TestWidget extends WidgetBase { }
+			const registry = new WidgetRegistry();
+			const context = new Context({ injected: true });
+			registry.define('test', context);
+			const widget = new TestWidget();
+			widget.__setProperties__({ registry });
+			assert.deepEqual(widget.properties, { registry, injected: true });
+		},
+		'inject children'() {
+			@inject({
+				name: 'test',
+				getChildren(inject: any, original: any) {
+					return [ v('injected', inject ) ];
+				}
+			})
+			class TestWidget extends WidgetBase { }
+			const registry = new WidgetRegistry();
+			const context = new Context({ injected: true });
+			registry.define('test', context);
+			const widget = new TestWidget();
+			widget.__setProperties__({ registry });
+			widget.__setChildren__([]);
+			assert.lengthOf(widget.children, 1);
+			const child = widget.children[0] as HNode;
+			assert.deepEqual(child.tag, 'injected');
+			assert.deepEqual(child.properties, { injected: true });
+			assert.deepEqual(child.children, []);
+			assert.isFunction(child.render);
+		},
+		'inject children and properties'() {
+			@inject({
+				name: 'test',
+				getProperties(inject: any, original: any) {
+					return { injected: true };
+				},
+				getChildren(inject: any, original: any) {
+					return [ v('injected', inject ) ];
+				}
+			})
+			class TestWidget extends WidgetBase { }
+			const registry = new WidgetRegistry();
+			const context = new Context({ injected: true });
+			registry.define('test', context);
+			const widget = new TestWidget();
+			widget.__setProperties__({ registry });
+			widget.__setChildren__([]);
+			assert.deepEqual(widget.properties, { registry, injected: true });
+			assert.lengthOf(widget.children, 1);
+			const child = widget.children[0] as HNode;
+			assert.deepEqual(child.tag, 'injected');
+			assert.deepEqual(child.properties, { injected: true });
+			assert.deepEqual(child.children, []);
+			assert.isFunction(child.render);
+		},
+		'supports multiple property injectors'() {
+			@inject({
+				name: 'test-1',
+				getProperties(inject: any, original: any) {
+					return inject;
+				}
+			})
+			class BaseTestWidget extends WidgetBase { }
+			@inject({
+				name: 'test-2',
+				getProperties(inject: any, original: any) {
+					return inject;
+				}
+			})
+			class TestWidget extends BaseTestWidget { }
+			const registry = new WidgetRegistry();
+			const context1 = new Context({ injectedFirst: true });
+			const context2 = new Context({ injectedSecond: true });
+			registry.define('test-1', context1);
+			registry.define('test-2', context2);
+			const widget = new TestWidget();
+			widget.__setProperties__({ registry });
+			assert.deepEqual(widget.properties, { registry, injectedFirst: true, injectedSecond: true });
+		},
+		'supports multiple child injectors'() {
+			@inject({
+				name: 'test-1',
+				getChildren(inject: any, original: any) {
+					return [ v('injected-one', inject ) ];
+				}
+			})
+			class BaseTestWidget extends WidgetBase { }
+			@inject({
+				name: 'test-2',
+				getChildren(inject: any, original: any) {
+					return [ v('injected-two', inject ) ];
+				}
+			})
+			class TestWidget extends BaseTestWidget { }
+			const registry = new WidgetRegistry();
+			const context1 = new Context({ injected: true });
+			const context2 = new Context({ injected: true });
+			registry.define('test-1', context1);
+			registry.define('test-2', context2);
+			const widget = new TestWidget();
+			widget.__setProperties__({ registry });
+			widget.__setChildren__([]);
+			assert.lengthOf(widget.children, 2);
+			const firstChild = widget.children[0] as HNode;
+			assert.deepEqual(firstChild.tag, 'injected-one');
+			assert.deepEqual(firstChild.properties, { injected: true });
+			assert.deepEqual(firstChild.children, []);
+			assert.isFunction(firstChild.render);
+			const secondChild = widget.children[1] as HNode;
+			assert.deepEqual(secondChild.tag, 'injected-two');
+			assert.deepEqual(secondChild.properties, { injected: true });
+			assert.deepEqual(secondChild.children, []);
+			assert.isFunction(secondChild.render);
+		},
+		'programmatic inject'() {
+			class TestWidget extends WidgetBase {
+				constructor() {
+					super();
+					inject({
+						name: 'test',
+						getProperties(inject: any, original: any) {
+							return { injected: true };
+						}
+					})(this);
+				}
+			}
+			const registry = new WidgetRegistry();
+			const context = new Context({ injected: true });
+			registry.define('test', context);
+			const widget = new TestWidget();
+			widget.__setProperties__({ registry });
+			assert.deepEqual(widget.properties, { registry, injected: true });
 		}
 	},
 	afterRender: {
