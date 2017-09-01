@@ -93,14 +93,14 @@ export function theme (theme: {}) {
 
 /**
  * Split class strings containing spaces into separate array entries.
- * ie. ['class1 class2', 'class3] > ['class1', 'class2', 'class3'];
+ * ie. ['class1 class2', 'class3] -> ['class1', 'class2', 'class3'];
  *
  * @param classes The array of class strings to split.
  * @return the complete classes array including any split classes.
  */
 function splitClassStrings(classes: string[]): string[] {
 	return classes.reduce((splitClasses: string[], className) => {
-		if (className.indexOf(' ') > 1) {
+		if (className.indexOf(' ') > -1) {
 			splitClasses.push(...className.split(' '));
 		}
 		else {
@@ -203,7 +203,7 @@ export function ThemeableMixin<E, T extends Constructor<WidgetBase<ThemeableProp
 
 		/**
 		 * Function used to add themeable classes to a widget. Returns a chained function 'fixed'
-		 * that can be used to pass nonthemeable classes to a widget. Filters out any null
+		 * that can be used to pass non-themeable classes to a widget. Filters out any null
 		 * values passed.
 		 *
 		 * @param classNames the classes to be added to the domNode. These classes must come from
