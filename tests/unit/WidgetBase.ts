@@ -9,7 +9,8 @@ import {
 	WidgetBase,
 	diffProperty,
 	afterRender,
-	beforeRender
+	beforeRender,
+	inject
 } from '../../src/WidgetBase';
 import { ignore, always, auto } from '../../src/diff';
 import WidgetRegistry, { WIDGET_BASE_TYPE } from './../../src/WidgetRegistry';
@@ -408,7 +409,13 @@ registerSuite({
 		},
 
 		'properties that are deleted dont get returned'() {
-			const widget = new WidgetBase<any>();
+			@inject({ getProperties: () => {
+				return { foo: 'bar' };
+			}})
+			class TestWidget extends WidgetBase<any> {}
+
+			const widget = new TestWidget();
+			debugger;
 			widget.__setProperties__({
 				a: 1,
 				b: 2,
