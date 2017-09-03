@@ -330,9 +330,9 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		}
 	}
 
-	public __setProperties__(newProperties: this['properties']): void {
+	public __setProperties__(properties: this['properties']): void {
 		this._renderState = WidgetRenderState.PROPERTIES;
-		const { bind, ...properties } = newProperties as any;
+		const { bind, ...newProperties } = properties as any;
 		const afterSetProperties: DiffProperties[] = [ diffProperties, ...this.getDecorator('afterSetProperties') ];
 		const diffPropertyOptions = {
 			bind,
@@ -340,21 +340,21 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 			getDecorator: this._boundGetDecorator
 		};
 
-		const blah = afterSetProperties.reduce((result, diffProperties) => {
-			const blah = diffProperties.call(this, this._properties, properties, diffPropertyOptions);
+		const { changedPropertyKeys: allChangedPropertyKeys } = afterSetProperties.reduce((results, afterSetProperties) => {
+			const { changedPropertyKeys, properties } = afterSetProperties.call(this, this._properties, newProperties, diffPropertyOptions);
 
-			this._mapDiffPropertyReactions(newProperties, blah.changedPropertyKeys).forEach((args, reaction) => {
+			this._mapDiffPropertyReactions(newProperties, changedPropertyKeys).forEach((args, reaction) => {
 				if (args.changed) {
 					reaction.call(this, args.previousProperties, args.newProperties);
 				}
 			});
-			result.properties = { ...result.properties, ...blah.properties };
-			this._properties = result.properties;
-			result.changedPropertyKeys = [ ...result.changedPropertyKeys, ...blah.changedPropertyKeys ];
-			return result;
+			results.properties = { ...results.properties, ...properties };
+			this._properties = results.properties;
+			results.changedPropertyKeys = [ ...results.changedPropertyKeys, ...changedPropertyKeys ];
+			return results;
 		}, { changedPropertyKeys: [], properties: {} } as DiffPropertyResult);
 
-		if (blah.changedPropertyKeys.length > 0) {
+		if (allChangedPropertyKeys.length > 0) {
 			this.invalidate();
 		}
 	}

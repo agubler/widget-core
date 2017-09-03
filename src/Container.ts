@@ -1,4 +1,5 @@
-import { inject, WidgetBase } from './WidgetBase';
+import { WidgetBase } from './WidgetBase';
+import { inject } from './decorators/inject';
 import { Constructor, DNode, GetChildren, GetProperties, RegistryLabel } from './interfaces';
 import { w } from './d';
 import { isWidgetBaseConstructor } from './WidgetRegistry';

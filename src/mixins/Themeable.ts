@@ -3,7 +3,8 @@ import { find } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
 import { ClassesFunction, Constructor, WidgetProperties } from './../interfaces';
 import { Context, WidgetRegistry } from './../WidgetRegistry';
-import { diffProperty, inject, WidgetBase, handleDecorator } from './../WidgetBase';
+import { diffProperty, WidgetBase, handleDecorator } from './../WidgetBase';
+import { inject } from './../decorators/inject';
 import { shallow } from './../diff';
 
 /**

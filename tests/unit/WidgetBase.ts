@@ -9,9 +9,9 @@ import {
 	WidgetBase,
 	diffProperty,
 	afterRender,
-	beforeRender,
-	inject
+	beforeRender
 } from '../../src/WidgetBase';
+import { inject } from './../../src/decorators/inject';
 import { ignore, always, auto } from '../../src/diff';
 import WidgetRegistry, { Context, WIDGET_BASE_TYPE } from './../../src/WidgetRegistry';
 import { ThemeableMixin } from './../../src/mixins/Themeable';
