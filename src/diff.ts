@@ -74,3 +74,72 @@ export function auto(previousProperty: any, newProperty: any): PropertyChangeRec
 	}
 	return result;
 }
+
+export interface DiffPropertyResult {
+	properties: any;
+	changedPropertyKeys: string[];
+}
+
+function defaultGetDecorator(name: string) {
+	return [];
+}
+
+export interface DiffProperties {
+	(previousProperties: any, newProperties: any, options?: DiffPropertyOptions): DiffPropertyResult;
+}
+
+export interface DiffPropertyOptions {
+	bind?: any;
+	bindFunctionProperty?: (property: any, bind: any) => any;
+	getDecorator?: (name: string) => any[];
+}
+
+export function diffProperties(previousProperties: any, newProperties: any, options: DiffPropertyOptions = {}): DiffPropertyResult {
+	const { bind, bindFunctionProperty, getDecorator = defaultGetDecorator } = options;
+	const changedPropertyKeys: string[] = [];
+	const allProperties = [ ...Object.keys(newProperties), ...Object.keys(previousProperties) ];
+	const checkedProperties: string[] = [];
+	const diffPropertyResults: any = {};
+	const registeredDiffPropertyNames = getDecorator('registeredDiffProperty');
+	let runReactions = false;
+
+	for (let i = 0; i < allProperties.length; i++) {
+		const propertyName = allProperties[i];
+		if (checkedProperties.indexOf(propertyName) > 0) {
+			continue;
+		}
+		checkedProperties.push(propertyName);
+		const previousProperty = previousProperties[propertyName];
+		let newProperty = newProperties[propertyName];
+		if (bindFunctionProperty && bind) {
+			newProperty = bindFunctionProperty(newProperties[propertyName], bind);
+		}
+		if (registeredDiffPropertyNames.indexOf(propertyName) !== -1) {
+			runReactions = true;
+			const diffFunctions = getDecorator(`diffProperty:${propertyName}`);
+			for (let i = 0; i < diffFunctions.length; i++) {
+				const result = diffFunctions[i](previousProperty, newProperty);
+				if (result.changed && changedPropertyKeys.indexOf(propertyName) === -1) {
+					changedPropertyKeys.push(propertyName);
+				}
+				if (propertyName in newProperties) {
+					diffPropertyResults[propertyName] = result.value;
+				}
+			}
+		}
+		else {
+			const result = auto(previousProperty, newProperty);
+			if (result.changed && changedPropertyKeys.indexOf(propertyName) === -1) {
+				changedPropertyKeys.push(propertyName);
+			}
+			if (propertyName in newProperties) {
+				diffPropertyResults[propertyName] = result.value;
+			}
+		}
+	}
+
+	return {
+		properties: diffPropertyResults,
+		changedPropertyKeys
+	};
+}
