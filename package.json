@@ -22,7 +22,7 @@
     "url": "https://github.com/dojo/widget-core.git"
   },
   "scripts": {
-    "prepublish": "grunt peerDepInstall",
+    "prepare": "grunt peerDepInstall",
     "test": "grunt test"
   },
   "peerDependencies": {
