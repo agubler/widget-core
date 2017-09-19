@@ -138,6 +138,7 @@ registerSuite({
 		});
 
 		registryHandler.add(registry);
+		registryHandler.get('other');
 		registry.define(baz, lazyWidget);
 		registryHandler.get(baz);
 		return promise.then(() => {
