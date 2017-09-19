@@ -1,7 +1,7 @@
 import { Map } from '@dojo/shim/Map';
 import { Evented } from '@dojo/core/Evented';
 import { Constructor, RegistryLabel, WidgetBaseInterface } from './interfaces';
-import { Registry, RegistryEventObject } from './Registry';
+import { Registry, RegistryEventObject, RegistryItem } from './Registry';
 import { Injector } from './Injector';
 
 export class RegistryHandler extends Evented {
@@ -21,7 +21,7 @@ export class RegistryHandler extends Evented {
 		this._baseRegistry = baseRegistry;
 	}
 
-	public define(label: RegistryLabel, widget: Constructor<WidgetBaseInterface>): void {
+	public define(label: RegistryLabel, widget: RegistryItem): void {
 		this._registry.define(label, widget);
 	}
 

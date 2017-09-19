@@ -28,7 +28,7 @@ export interface InjectConfig {
 	name: RegistryLabel;
 
 	/**
-	 * Function that returns propertues to inject using the passed properties
+	 * Function that returns properties to inject using the passed properties
 	 * and the injected payload.
 	 */
 	getProperties: GetProperties;
