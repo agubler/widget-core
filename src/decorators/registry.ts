@@ -6,14 +6,6 @@ import { handleDecorator, beforeRender, WidgetBase } from './../WidgetBase';
 const instanceMap: WeakMap<WidgetBase, RegistryLabel[]> = new WeakMap();
 
 /**
- * The shape of the decorator configuration.
- */
-export interface DefineDecoratorConfig {
-	label: RegistryLabel;
-	item: RegistryItem;
-}
-
-/**
  * Decorator function to registry items that will be defined against
  * the default registry of a widget.
  *

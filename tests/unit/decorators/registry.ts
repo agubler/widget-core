@@ -22,11 +22,18 @@ registerSuite({
 			render() {
 				return w('registry-item', {});
 			}
+			invalidate() {
+				super.invalidate();
+			}
 		}
 
 		const widget = createTestWidget(TestWidget, {});
-		const vnode = widget.__render__() as VNode;
+		let vnode = widget.__render__() as VNode;
 		assert.strictEqual(vnode.vnodeSelector, 'registry-item');
+		widget.getWidgetUnderTest().invalidate();
+		vnode = widget.__render__() as VNode;
+		assert.strictEqual(vnode.vnodeSelector, 'registry-item');
+
 	},
 	'define items on the local registry'() {
 		class RegistryWidget extends WidgetBase {
