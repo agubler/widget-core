@@ -43,6 +43,12 @@ enum WidgetRenderState {
 	RENDER
 }
 
+enum WidgetDirtyState {
+	INITIALIZED,
+	DIRTY,
+	CLEAN
+}
+
 interface ReactionFunctionArguments {
 	previousProperties: any;
 	newProperties: any;
@@ -137,7 +143,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 	/**
 	 * marker indicating if the widget requires a render
 	 */
-	private _dirty: boolean;
+	private _dirty = WidgetDirtyState.INITIALIZED;
 
 	/**
 	 * cachedVNode from previous render
@@ -388,18 +394,16 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 	public __render__(): VirtualDomNode | VirtualDomNode[] {
 		this._renderState = WidgetRenderState.RENDER;
-		if (this._dirty === true || this._cachedVNode === undefined) {
-			this._dirty = false;
+		this._runOnInitialized();
+		if (this._dirty !== WidgetDirtyState.CLEAN) {
+			this._dirty = WidgetDirtyState.CLEAN;
 			const render = this._runBeforeRenders();
 			let dNode = render();
 			dNode = this.runAfterRenders(dNode);
 			this._decorateNodes(dNode);
-			const widget = this._dNodeToVNode(dNode);
+			this._cachedVNode = this._dNodeToVNode(dNode);
 			this._manageDetachedChildren();
 			this._nodeHandler.clear();
-			this._cachedVNode = widget;
-			this._renderState = WidgetRenderState.IDLE;
-			return widget;
 		}
 		this._renderState = WidgetRenderState.IDLE;
 		return this._cachedVNode;
@@ -449,17 +453,23 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 	protected invalidate(): void {
 		if (this._renderState === WidgetRenderState.IDLE) {
-			this._dirty = true;
+			this._markDirty();
 			this.emit({
 				type: 'invalidated',
 				target: this
 			});
 		}
 		else if (this._renderState === WidgetRenderState.PROPERTIES) {
-			this._dirty = true;
+			this._markDirty();
 		}
 		else if (this._renderState === WidgetRenderState.CHILDREN) {
-			this._dirty = true;
+			this._markDirty();
+		}
+	}
+
+	private _markDirty(): void {
+		if (this._dirty === WidgetDirtyState.CLEAN) {
+			this._dirty = WidgetDirtyState.DIRTY;
 		}
 	}
 
@@ -586,6 +596,15 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 
 	public get registry(): RegistryHandler {
 		return this._registry;
+	}
+
+	private _runOnInitialized(): void {
+		if (this._dirty === WidgetDirtyState.INITIALIZED) {
+			const onInitializedCallbacks: any[] = this.getDecorator('onInitialized');
+			for (let i = 0; i < onInitializedCallbacks.length; i++) {
+				onInitializedCallbacks[i].call(this);
+			}
+		}
 	}
 
 	private _runBeforeProperties(properties: any) {
