@@ -5,9 +5,14 @@ import { stub, SinonStub } from 'sinon';
 import { v } from './../../../src/d';
 import { DNode, Render } from './../../../src/interfaces';
 import { beforeRender } from './../../../src/decorators/beforeRender';
-import { WidgetBase } from './../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from './../../../src/WidgetBase';
 
 let consoleStub: SinonStub;
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
+}
 
 registerSuite({
 	name: 'decorators/beforeRender',

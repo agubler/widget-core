@@ -74,7 +74,7 @@ export interface I18nMixin {
 }
 
 export function I18nMixin<T extends Constructor<WidgetBase<any>>>(Base: T): T & Constructor<I18nMixin> {
-	class I18n extends Base {
+	abstract class I18n extends Base {
 
 		public properties: I18nProperties;
 

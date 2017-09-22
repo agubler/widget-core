@@ -4,7 +4,7 @@ import { stub, spy, SinonStub } from 'sinon';
 import { v, w } from '../../src/d';
 import { VNode } from '@dojo/interfaces/vdom';
 import { Constructor, DNode } from '../../src/interfaces';
-import { WidgetBase } from '../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from '../../src/WidgetBase';
 import Registry, { WIDGET_BASE_TYPE } from './../../src/Registry';
 
 import { handleDecorator } from './../../src/decorators/handleDecorator';
@@ -18,6 +18,12 @@ function testDecorator(func?: Function) {
 	return handleDecorator((target, propertyKey) => {
 		target.addDecorator('test-decorator', func);
 	});
+}
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
 }
 
 registerSuite({

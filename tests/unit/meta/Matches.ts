@@ -6,12 +6,19 @@ import global from '@dojo/shim/global';
 import sendEvent from '../../support/sendEvent';
 import { v } from '../../../src/d';
 import { ProjectorMixin } from '../../../src/main';
-import { WidgetBase } from '../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from '../../../src/WidgetBase';
+import { DNode } from './../../../src/interfaces';
 import { ThemeableMixin } from '../../../src/mixins/Themeable';
 
 import Matches from '../../../src/meta/Matches';
 
 let rAF: SinonStub;
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return null;
+	}
+}
 
 function resolveRAF() {
 	for (let i = 0; i < rAF.callCount; i++) {

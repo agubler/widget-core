@@ -5,7 +5,7 @@ import Map from '@dojo/shim/Map';
 import '@dojo/shim/Promise'; // Imported for side-effects
 import WeakMap from '@dojo/shim/WeakMap';
 import { Handle } from '@dojo/interfaces/core';
-import { isWNode, v, isHNode } from './d';
+import { isWNode, isHNode } from './d';
 import { auto } from './diff';
 import {
 	AfterRender,
@@ -61,7 +61,7 @@ const boundAuto = auto.bind(null);
 /**
  * Main widget base for all widgets to extend
  */
-export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends Evented implements WidgetBaseInterface<P, C> {
+export abstract class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends Evented implements WidgetBaseInterface<P, C> {
 
 	/**
 	 * static identifier
@@ -414,9 +414,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> extends E
 		}
 	}
 
-	protected render(): DNode | DNode[] {
-		return v('div', {}, this.children);
-	}
+	protected abstract render(): DNode | DNode[];
 
 	/**
 	 * Function to add decorators to WidgetBase

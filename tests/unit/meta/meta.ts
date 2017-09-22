@@ -5,10 +5,17 @@ import { Base as MetaBase } from '../../../src/meta/Base';
 import { stub, SinonStub, spy } from 'sinon';
 import NodeHandler, { NodeEventType } from '../../../src/NodeHandler';
 import { v } from '../../../src/d';
+import { DNode } from './../../../src/interfaces';
 import { ProjectorMixin } from '../../../src/main';
-import { WidgetBase } from '../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from '../../../src/WidgetBase';
 
 let rAFStub: SinonStub;
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return null;
+	}
+}
 
 function resolveRAF() {
 	for (let i = 0; i < rAFStub.callCount; i++) {

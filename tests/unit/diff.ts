@@ -1,7 +1,13 @@
 import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import * as diff from '../../src/diff';
-import WidgetBase from '../../src/WidgetBase';
+import AbstractWidgetBase from '../../src/WidgetBase';
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render() {
+		return null;
+	}
+}
 
 registerSuite({
 	name: 'diff',

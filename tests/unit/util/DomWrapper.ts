@@ -1,5 +1,5 @@
 import * as registerSuite from 'intern!object';
-import { WidgetBase } from './../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from './../../../src/WidgetBase';
 import { v, w } from './../../../src/d';
 import { DomWrapper } from '../../../src/util/DomWrapper';
 import global from '@dojo/shim/global';
@@ -10,6 +10,13 @@ import { ThemeableMixin, theme } from '../../../src/mixins/Themeable';
 
 let rAF: any;
 let projector: any;
+
+import { DNode } from './../../../src/interfaces';
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return null;
+	}
+}
 
 function resolveRAF() {
 	for (let i = 0; i < rAF.callCount; i++) {

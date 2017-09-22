@@ -2,16 +2,24 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 
 import { inject } from './../../../src/decorators/inject';
-import { WidgetBase } from './../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from './../../../src/WidgetBase';
 import { Registry } from './../../../src/Registry';
 import { Injector } from './../../../src/Injector';
 import { WidgetProperties } from './../../../src/interfaces';
+import { v } from './../../../src/d';
 
 import createTestWidget from './../../support/createTestWidget';
 
 let injectorOne = new Injector<any>({ foo: 'bar' });
 let injectorTwo = new Injector<any>({ bar: 'foo' });
 let registry: Registry;
+
+import { DNode } from './../../../src/interfaces';
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
+}
 
 registerSuite({
 	name: 'decorators/inject',

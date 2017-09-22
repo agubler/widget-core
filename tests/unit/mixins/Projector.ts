@@ -6,11 +6,18 @@ import * as assert from 'intern/chai!assert';
 import { spy, stub, SinonStub } from 'sinon';
 import { v } from '../../../src/d';
 import { ProjectorMixin, ProjectorAttachState } from '../../../src/mixins/Projector';
-import { WidgetBase } from '../../../src/WidgetBase';
+import { DNode } from './../../../src/interfaces';
+import { WidgetBase as AbstractWidgetBase } from '../../../src/WidgetBase';
 import { beforeRender } from './../../../src/decorators/beforeRender';
 import { Registry } from './../../../src/Registry';
 
 const Event = global.window.Event;
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
+}
 
 class BaseTestWidget extends ProjectorMixin(WidgetBase) {}
 

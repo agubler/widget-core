@@ -155,7 +155,7 @@ function setDomNodes(vnode: VNode, domNode: Element | null = null) {
 }
 
 export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T): T & Constructor<ProjectorMixin<P>> {
-	class Projector extends Base {
+	abstract class Projector extends Base {
 
 		public projectorState: ProjectorAttachState;
 		public properties: Readonly<P> & Readonly<ProjectorProperties>;

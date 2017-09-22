@@ -2,8 +2,14 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import { assign } from '@dojo/core/lang';
 import { DNode, HNode, WNode, WidgetProperties } from '../../src/interfaces';
-import { WidgetBase } from '../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from '../../src/WidgetBase';
 import { v, w, decorate, WNODE, HNODE, isWNode, isHNode } from '../../src/d';
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render() {
+		return null;
+	}
+}
 
 interface ChildProperties extends WidgetProperties {
 	myChildProperty: string;
@@ -13,13 +19,13 @@ interface TestProperties extends WidgetProperties {
 	required: boolean;
 }
 
-class TestChildWidget extends WidgetBase<ChildProperties> {
+class TestChildWidget extends AbstractWidgetBase<ChildProperties> {
 	render() {
 		return v('div');
 	}
 }
 
-class TestWidget extends WidgetBase<TestProperties, WNode<TestChildWidget>> {
+class TestWidget extends AbstractWidgetBase<TestProperties, WNode<TestChildWidget>> {
 	render() {
 		return v('outernode', { type: 'mytype' }, [
 			v('child-one'),

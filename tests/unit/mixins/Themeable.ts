@@ -9,8 +9,9 @@ import {
 	registerThemeInjector
 } from '../../../src/mixins/Themeable';
 import { Injector } from './../../../src/Injector';
-import { WidgetBase } from '../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from '../../../src/WidgetBase';
 import { Registry } from '../../../src/Registry';
+import { DNode } from './../../../src/interfaces';
 import { v, w } from '../../../src/d';
 import { stub, SinonStub } from 'sinon';
 
@@ -29,6 +30,12 @@ import createTestWidget from './../../support/createTestWidget';
 (<any> baseThemeClasses3)[' _key'] = 'testPath3';
 
 let testRegistry: Registry;
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
+}
 
 @theme(baseThemeClasses1)
 class TestWidget extends ThemeableMixin(WidgetBase)<ThemeableProperties<typeof baseThemeClasses1>> { }

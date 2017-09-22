@@ -96,7 +96,11 @@ registerSuite({
 	},
 	'container always updates'() {
 		@diffProperty('foo', always)
-		class Child extends WidgetBase<{ foo: string }> {}
+		class Child extends WidgetBase<{ foo: string }> {
+			render() {
+				return v('child');
+			}
+		}
 		const ChildContainer = Container(Child, 'test-state-1', { getProperties });
 
 		class Parent extends WidgetBase<any> {

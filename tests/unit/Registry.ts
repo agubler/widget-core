@@ -1,11 +1,17 @@
 import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import Registry from './../../src/Registry';
-import { WidgetBase } from './../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from './../../src/WidgetBase';
 import Promise from '@dojo/shim/Promise';
 import { Injector } from './../../src/Injector';
 
 const testInjector = new Injector({});
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render() {
+		return null;
+	}
+}
 
 registerSuite({
 	name: 'Registry',

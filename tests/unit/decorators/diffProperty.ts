@@ -4,11 +4,19 @@ import * as assert from 'intern/chai!assert';
 import { PropertyChangeRecord } from './../../../src/interfaces';
 import { always, ignore } from './../../../src/diff';
 import { diffProperty } from './../../../src/decorators/diffProperty';
-import { WidgetBase } from './../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from './../../../src/WidgetBase';
+import { v } from './../../../src/d';
 
 interface TestProperties {
 	id?: string;
 	foo: string;
+}
+
+import { DNode } from './../../../src/interfaces';
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
 }
 
 registerSuite({

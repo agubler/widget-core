@@ -171,7 +171,7 @@ export function ThemeableMixin<E, T extends Constructor<WidgetBase<ThemeableProp
 		}
 		return {};
 	}})
-	class Themeable extends Base {
+	abstract class Themeable extends Base {
 
 		public properties: ThemeableProperties<E>;
 

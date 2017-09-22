@@ -2,11 +2,17 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import RegistryHandler from '../../src/RegistryHandler';
 import Registry from '../../src/Registry';
-import { WidgetBase } from '../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from '../../src/WidgetBase';
 import { Injector } from './../../src/Injector';
 
 const foo = Symbol();
 const bar = Symbol();
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render() {
+		return null;
+	}
+}
 
 class GlobalWidget extends WidgetBase {}
 const globalInjector = new Injector({});

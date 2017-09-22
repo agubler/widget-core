@@ -4,11 +4,18 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import * as sinon from 'sinon';
 import { I18nMixin, I18nProperties } from '../../../src/mixins/I18n';
-import { WidgetBase } from '../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from '../../../src/WidgetBase';
+import { DNode } from './../../../src/interfaces';
 import bundle from '../../support/nls/greetings';
 import { fetchCldrData } from '../../support/util';
-import { w } from './../../../src/d';
+import { v, w } from './../../../src/d';
 import { ThemeableMixin } from './../../../src/mixins/Themeable';
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
+}
 
 class Localized extends I18nMixin(ThemeableMixin(WidgetBase))<I18nProperties> { }
 

@@ -1,12 +1,18 @@
 import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import { initializeElement, handleAttributeChanged, CustomElementDescriptor } from '../../src/customElements';
-import { WidgetBase } from '../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from '../../src/WidgetBase';
 import global from '@dojo/shim/global';
 import { assign } from '@dojo/core/lang';
 import * as projector from '../../src/mixins/Projector';
 import * as sinon from 'sinon';
 import { v } from '../../src/d';
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render() {
+		return null;
+	}
+}
 
 function createFakeElement(attributes: any, descriptor: CustomElementDescriptor): any {
 	let widgetInstance: WidgetBase<any> | null;
@@ -346,7 +352,7 @@ registerSuite({
 
 				let element = createFakeElement({}, {
 					tagName: 'test',
-					widgetConstructor: class extends WidgetBase<any> {
+					widgetConstructor: class extends AbstractWidgetBase<any> {
 						render() {
 							rendered = true;
 							return v('div');

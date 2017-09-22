@@ -2,8 +2,16 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 
 import { beforeProperties } from './../../../src/decorators/beforeProperties';
-import { WidgetBase } from './../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from './../../../src/WidgetBase';
 import { WidgetProperties } from './../../../src/interfaces';
+import { v } from './../../../src/d';
+import { DNode } from './../../../src/interfaces';
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
+}
 
 registerSuite({
 	name: 'decorators/beforeProperties',

@@ -3,7 +3,14 @@ import * as assert from 'intern/chai!assert';
 
 import { DNode } from './../../../src/interfaces';
 import { afterRender } from './../../../src/decorators/afterRender';
-import { WidgetBase } from './../../../src/WidgetBase';
+import { WidgetBase as AbstractWidgetBase } from './../../../src/WidgetBase';
+import { v } from './../../../src/d';
+
+class WidgetBase<P = any> extends AbstractWidgetBase<P> {
+	render(): DNode | DNode[] {
+		return v('div', this.children);
+	}
+}
 
 registerSuite({
 	name: 'decorators/afterRender',
