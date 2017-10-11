@@ -170,9 +170,7 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 		private _boundDoRender: () => void;
 		private _boundRender: Function;
 		private _projectorChildren: DNode[] = [];
-		private _resetChildren = true;
 		private _projectorProperties: this['properties'] = {} as this['properties'];
-		private _resetProperties = true;
 		private _rootTagName: string;
 		private _attachType: AttachType;
 
@@ -240,6 +238,8 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 
 		public scheduleRender() {
 			if (this.projectorState === ProjectorAttachState.Attached && !this._scheduled && !this._paused) {
+				this.__setProperties__(this._projectorProperties);
+				this.__setChildren__(this._projectorChildren);
 				if (this._async) {
 					this._scheduled = global.requestAnimationFrame(this._boundDoRender);
 				}
@@ -290,13 +290,21 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 		}
 
 		public setChildren(children: DNode[]): void {
-			this._resetChildren = false;
+			this.__setChildren__(children);
+			this.scheduleRender();
+		}
+
+		public __setChildren__(children: DNode[]) {
 			this._projectorChildren = [ ...children ];
-			super.__setChildren__([ ...children ]);
+			super.__setChildren__(children);
 		}
 
 		public setProperties(properties: this['properties']): void {
-			this._resetProperties = false;
+			this.__setProperties__(properties);
+			this.scheduleRender();
+		}
+
+		public __setProperties__(properties: this['properties']): void {
 			if (this._projectorProperties && this._projectorProperties.registry !== properties.registry) {
 				if (this._projectorProperties.registry) {
 					this._projectorProperties.registry.destroy();
@@ -347,21 +355,8 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 			return node;
 		}
 
-		public __render__(): VNode {
-			if (this._resetChildren) {
-				this.setChildren(this._projectorChildren);
-			}
-			if (this._resetProperties) {
-				this.setProperties(this._projectorProperties);
-			}
-			this._resetChildren = true;
-			this._resetProperties = true;
-			return super.__render__() as VNode;
-		}
-
 		public invalidate(): void {
 			super.invalidate();
-			this.scheduleRender();
 		}
 
 		private _doRender() {
