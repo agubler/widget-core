@@ -1,12 +1,19 @@
 import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
-import { initializeElement, handleAttributeChanged, CustomElementDescriptor } from '../../src/customElements';
+import {
+	ChildrenType,
+	initializeElement,
+	handleAttributeChanged,
+	CustomElementDescriptor,
+	CustomElementWrapper
+} from '../../src/customElements';
 import { WidgetBase } from '../../src/WidgetBase';
 import global from '@dojo/shim/global';
 import { assign } from '@dojo/core/lang';
-import * as projector from '../../src/mixins/Projector';
+import { ProjectorMixin } from '../../src/mixins/Projector';
+import { stub, spy } from 'sinon';
 import * as sinon from 'sinon';
-import { v } from '../../src/d';
+import { v, w } from '../../src/d';
 
 function createFakeElement(attributes: any, descriptor: CustomElementDescriptor): any {
 	let widgetInstance: WidgetBase<any> | null;
@@ -42,11 +49,20 @@ function createFakeElement(attributes: any, descriptor: CustomElementDescriptor)
 	};
 }
 
+let rAF: any;
+let projector: any;
+
+function resolveRAF() {
+	for (let i = 0; i < rAF.callCount; i++) {
+		rAF.getCall(0).args[0]();
+	}
+	rAF.reset();
+}
+
 let oldCustomEvent: any;
 
 registerSuite({
 	name: 'customElements',
-
 	'attributes': {
 		'attributes are set as properties'() {
 			let element = createFakeElement({
@@ -281,30 +297,106 @@ registerSuite({
 		}
 	},
 
-	'children': {
-		'children get wrapped in dom wrappers'() {
-			let element = createFakeElement({}, {
+	'dojo children': {
+		'custom element without children sets properties on initialization'() {
+			let element = createFakeElement({ foo: 'bar' }, {
 				tagName: 'test',
-				widgetConstructor: WidgetBase
+				widgetConstructor: WidgetBase,
+				attributes: [
+					{
+						attributeName: 'foo'
+					}
+				]
 			});
-			element.children = [ {
-				key: 'test',
-				parentNode: element
-			} ];
 
-			// so.. this is going to fail in maquette, since we don't have a DOM, but,
-			// it's ok because all of our code has already run by now
-			try {
-				initializeElement(element);
-			}
-			catch (e) {
-			}
+			initializeElement(element);
+
+			let properties = element.getWidgetInstance().properties;
+			const children = element.getWidgetInstance().children;
+
+			assert.lengthOf(element.removedChildren(), 0);
+			assert.lengthOf(children, 0);
+			assert.strictEqual(properties.foo, 'bar');
+		},
+		'custom element with children sets properties when first child is connected'() {
+			let element = createFakeElement({ foo: 'bar' }, {
+				tagName: 'test',
+				widgetConstructor: WidgetBase,
+				attributes: [
+					{
+						attributeName: 'foo'
+					}
+				]
+			});
+
+			const child = document.createElement('div');
+			element.children = [ child ];
+
+			initializeElement(element);
+
+			let properties = element.getWidgetInstance().properties;
+			const children = element.getWidgetInstance().children;
+
+			assert.isUndefined(properties.foo);
+
+			const evt = document.createEvent('CustomEvent');
+			evt.initCustomEvent('connected', false, false, false);
+			child.dispatchEvent(evt);
+
+			properties = element.getWidgetInstance().properties;
 
 			assert.lengthOf(element.removedChildren(), 1);
-			assert.lengthOf(element.getWidgetInstance().children, 1);
+			assert.lengthOf(children, 1);
+			assert.strictEqual(properties.foo, 'bar');
 		}
 	},
+	'element children': {
+		'custom element without children sets properties on initialization'() {
+			let element = createFakeElement({ foo: 'bar' }, {
+				tagName: 'test',
+				childrenType: ChildrenType.ELEMENT,
+				widgetConstructor: WidgetBase,
+				attributes: [
+					{
+						attributeName: 'foo'
+					}
+				]
+			});
 
+			initializeElement(element);
+
+			let properties = element.getWidgetInstance().properties;
+			const children = element.getWidgetInstance().children;
+
+			assert.lengthOf(element.removedChildren(), 0);
+			assert.lengthOf(children, 0);
+			assert.strictEqual(properties.foo, 'bar');
+		},
+		'custom element with children sets properties on initialization'() {
+			let element = createFakeElement({ foo: 'bar' }, {
+				tagName: 'test',
+				widgetConstructor: WidgetBase,
+				childrenType: ChildrenType.ELEMENT,
+				attributes: [
+					{
+						attributeName: 'foo'
+					}
+				]
+			});
+
+			const child = document.createElement('div');
+			element.children = [ child ];
+
+			initializeElement(element);
+
+			const properties = element.getWidgetInstance().properties;
+			const children = element.getWidgetInstance().children;
+
+			assert.lengthOf(element.removedChildren(), 1);
+			assert.lengthOf(children, 1);
+			assert.strictEqual(properties.foo, 'bar');
+		}
+	},
 	'initialization': {
 		'properties are sent to widget'() {
 			let element = createFakeElement({}, {
@@ -320,7 +412,70 @@ registerSuite({
 			assert.strictEqual(element.getWidgetInstance().properties.prop1, 'test');
 		}
 	},
+	'CustomElementWrapper': {
+		beforeEach() {
+			rAF = stub(global, 'requestAnimationFrame');
+		},
+		afterEach() {
+			rAF.restore();
+			projector && projector.destroy();
+		},
+		'For DOJO children the wrapper is always invalidated for the first render after the widget instance is attached to the DOM'() {
+			let widgetInstance: any;
+			let invalidateCount = 0;
+			let renderCount = 0;
+			const domNode: any = document.createElement('custom-element');
+			domNode.foo = 'bar';
+			domNode.setAttribute('bar', 'foo');
+			domNode.getWidgetInstance = () => {
+				return widgetInstance;
+			};
 
+			const DomNode = CustomElementWrapper(domNode);
+			class TestCustomElementWrapper extends DomNode {
+				invalidate() {
+					invalidateCount++;
+					super.invalidate();
+				}
+				render() {
+					renderCount++;
+					return super.render();
+				}
+			}
+			class Foo extends WidgetBase {
+				render() {
+					return v('div', [
+						w(TestCustomElementWrapper, { id: 'foo', extra: { foo: 'bar' } })
+					]);
+				}
+			}
+
+			const Projector = ProjectorMixin(Foo);
+			projector = new Projector();
+			const root = document.createElement('div');
+			projector.append(root);
+			resolveRAF();
+			assert.strictEqual(invalidateCount, 1);
+			assert.strictEqual(renderCount, 1);
+			projector.invalidate();
+			resolveRAF();
+			assert.strictEqual(invalidateCount, 1);
+			assert.strictEqual(renderCount, 1);
+			widgetInstance = {
+				setProperties: stub()
+			};
+			projector.invalidate();
+			resolveRAF();
+			assert.strictEqual(invalidateCount, 2);
+			assert.strictEqual(renderCount, 2);
+		},
+		'For DOJO children the wrapper the properties are set directly on the instance'() {
+
+		},
+		'For ELEMENT children properties are set on the HNode': {
+
+		}
+	},
 	'appender': function () {
 		let sandbox: any;
 

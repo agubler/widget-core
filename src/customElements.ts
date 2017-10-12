@@ -1,11 +1,11 @@
 import { assign } from '@dojo/core/lang';
 import { from as arrayFrom } from '@dojo/shim/array';
 import global from '@dojo/shim/global';
-import { Constructor, DNode, WidgetProperties } from './interfaces';
+import { Constructor, DNode, VirtualDomProperties, WidgetProperties } from './interfaces';
 import { WidgetBase } from './WidgetBase';
-import { w } from './d';
+import { v, w } from './d';
 import { ProjectorMixin } from './mixins/Projector';
-import DomWrapper from './util/DomWrapper';
+import { VNode } from '@dojo/interfaces/vdom';
 
 /**
  * @type CustomElementAttributeDescriptor
@@ -60,6 +60,11 @@ export interface CustomElementInitializer {
 	(properties: WidgetProperties): void;
 }
 
+export enum ChildrenType {
+	DOJO = 'DOJO',
+	ELEMENT = 'ELEMENT'
+}
+
 /**
  * @type CustomElementDescriptor
  *
@@ -102,6 +107,11 @@ export interface CustomElementDescriptor {
 	 * Initialization function called before the widget is created (for custom property setting)
 	 */
 	initialization?: CustomElementInitializer;
+
+	/**
+	 *
+	 */
+	childrenType?: ChildrenType;
 }
 
 /**
@@ -119,6 +129,45 @@ export interface CustomElement extends HTMLElement {
 	getDescriptor(): CustomElementDescriptor;
 	getWidgetInstance(): ProjectorMixin<any>;
 	setWidgetInstance(instance: ProjectorMixin<any>): void;
+}
+
+export interface CustomElementWrapperOptions {
+	childrenType?: ChildrenType;
+}
+
+export type CustomElementWrapperProperties = VirtualDomProperties & WidgetProperties;
+
+export type CustomElementWrapper = Constructor<WidgetBase<CustomElementWrapperProperties>>;
+
+export function CustomElementWrapper(
+	domNode: CustomElement,
+	options: CustomElementWrapperOptions = {}
+): CustomElementWrapper {
+	const { childrenType = ChildrenType.DOJO } = options;
+
+	return class extends WidgetBase<CustomElementWrapperProperties> {
+
+		private _firstRender = true;
+
+		public __render__(): VNode {
+			if (this._firstRender && domNode.getWidgetInstance()) {
+				this._firstRender = false;
+				this.invalidate();
+			}
+			const vNode = super.__render__() as VNode;
+			vNode.domNode = domNode;
+			return vNode;
+		}
+
+		protected render(): DNode {
+			let properties = { ...this.properties, key: 'root' };
+			const widgetInstance = domNode.getWidgetInstance();
+			if (widgetInstance) {
+				widgetInstance.setProperties({ key: 'root', ...widgetInstance.properties, ...this.properties });
+			}
+			return v(domNode.tagName, childrenType === ChildrenType.DOJO ? {} : properties);
+		}
+	};
 }
 
 function getWidgetPropertyFromAttribute(attributeName: string, attributeValue: string | null, descriptor: CustomElementAttributeDescriptor): [ string, any ] {
@@ -156,7 +205,13 @@ if (typeof customEventClass !== 'function') {
 export function initializeElement(element: CustomElement) {
 	let initialProperties: any = {};
 
-	const { attributes = [], events = [], properties = [], initialization } = element.getDescriptor();
+	const {
+		childrenType = ChildrenType.DOJO,
+		attributes = [],
+		events = [],
+		properties = [],
+		initialization
+	} = element.getDescriptor();
 
 	attributes.forEach(attribute => {
 		const attributeName = attribute.attributeName;
@@ -224,8 +279,16 @@ export function initializeElement(element: CustomElement) {
 	// find children
 	let children: DNode[] = [];
 
-	arrayFrom(element.children).forEach((childNode: HTMLElement, index: number) => {
-		const DomElement = DomWrapper(childNode);
+	const Projector = ProjectorMixin(element.getWidgetConstructor());
+	const widgetInstance = new Projector();
+
+	arrayFrom(element.children).forEach((childNode: CustomElement, index: number) => {
+		if (childrenType === ChildrenType.DOJO) {
+			childNode.addEventListener('connected', () => {
+				widgetInstance.setProperties(initialProperties);
+			});
+		}
+		const DomElement = CustomElementWrapper(childNode, { childrenType  });
 		children.push(w(DomElement, {
 			key: `child-${index}`
 		}));
@@ -239,10 +302,9 @@ export function initializeElement(element: CustomElement) {
 		element.removeChild(childNode);
 	});
 
-	const projector = ProjectorMixin(element.getWidgetConstructor());
-
-	const widgetInstance = new projector();
-	widgetInstance.setProperties(initialProperties);
+	if (childrenType === ChildrenType.ELEMENT || children.length === 0) {
+		widgetInstance.setProperties(initialProperties);
+	}
 	widgetInstance.setChildren(children);
 	element.setWidgetInstance(widgetInstance);
 

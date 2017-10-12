@@ -1,3 +1,4 @@
+import global from '@dojo/shim/global';
 import {
 	CustomElementDescriptor,
 	handleAttributeChanged,
@@ -41,6 +42,9 @@ export function registerCustomElement(descriptorFactory: CustomElementDescriptor
 
 		public connectedCallback() {
 			if (!this._isAppended) {
+				this.dispatchEvent(new global.CustomEvent('connected', {
+					bubbles: false
+				}));
 				this._appender();
 				this._isAppended = true;
 			}
