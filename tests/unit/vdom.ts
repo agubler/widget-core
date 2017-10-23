@@ -874,6 +874,24 @@ describe('vdom', () => {
 				assert.strictEqual(div.className, 'c');
 			});
 
+			it('supports null, undefined and zero length strings in classes', () => {
+				const div = document.createElement('div');
+				div.className = 'b';
+				const projection = dom.merge(div, v('div', { classes: [ 'b', null, null, null ] }), projectorStub);
+				assert.strictEqual(div.className, 'b');
+				projection.update(v('div', { classes: [ 'a' , null, undefined, '' ] }));
+				assert.strictEqual(div.className, 'a');
+
+				projection.update(v('div', { classes: [ 'a', null, undefined, '' ] }));
+				assert.strictEqual(div.className, 'a');
+				projection.update(v('div', { classes: [] }));
+				assert.strictEqual(div.className, '');
+				projection.update(v('div', { classes: [ 'a', null, undefined, '' ] }));
+				assert.strictEqual(div.className, 'a');
+				projection.update(v('div'));
+				assert.strictEqual(div.className, '');
+			});
+
 		});
 
 		describe('styles', () => {
