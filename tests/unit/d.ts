@@ -139,17 +139,6 @@ registerSuite({
 			assert.equal(hNode.type, HNODE);
 			assert.isTrue(isHNode(hNode));
 			assert.isFalse(isWNode(hNode));
-		},
-		'given a classes function in properties is called to get a classes object'() {
-			const classes = () => {
-				return { foo: true };
-			};
-			const hNode = v('div', { classes });
-			assert.deepEqual(hNode.properties, {
-				classes: {
-					foo: true
-				}
-			});
 		}
 	},
 	decorator: {

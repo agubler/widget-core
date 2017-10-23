@@ -17,7 +17,7 @@ registerSuite({
 			render() {
 				const { hello } = this.properties;
 				return (
-					<header classes={{ background: true }} >
+					<header classes={[ 'background' ]} >
 						<div>{ hello }</div>
 					</header>
 				);

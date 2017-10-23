@@ -130,19 +130,13 @@ function setProperties(domNode: Node, properties: VirtualDomProperties, projecti
 	for (let i = 0; i < propCount; i++) {
 		const propName = propNames[i];
 		let propValue = properties[propName];
-		if (propName === 'className') {
-			throw new Error('Property `className` is not supported, use `class`.');
-		}
-		else if (propName === 'class') {
-			(propValue as string).split(/\s+/).forEach(token => (domNode as Element).classList.add(token));
-		}
-		else if (propName === 'classes') {
-			const classNames = Object.keys(propValue);
-			const classNameCount = classNames.length;
-			for (let j = 0; j < classNameCount; j++) {
-				const className = classNames[j];
-				if (propValue[className]) {
-					(domNode as Element).classList.add(className);
+		if (propName === 'classes') {
+			if (!(domNode as Element).className) {
+				(domNode as Element).className = propValue.join(' ');
+			}
+			else {
+				for (let i = 0; i < propValue.length; i++) {
+					(domNode as Element).classList.add(propValue[i]);
 				}
 			}
 		}
@@ -202,32 +196,42 @@ function updateProperties(
 	let propertiesUpdated = false;
 	const propNames = Object.keys(properties);
 	const propCount = propNames.length;
+	if (propNames.indexOf('classes') === -1 && previousProperties.classes) {
+		for (let i = 0; i < previousProperties.classes.length; i++) {
+			(domNode as Element).classList.remove(previousProperties.classes[i]);
+		}
+	}
 	for (let i = 0; i < propCount; i++) {
 		const propName = propNames[i];
 		let propValue = properties[propName];
 		const previousValue = previousProperties![propName];
-		if (propName === 'class') {
-			if (previousValue !== propValue) {
-				throw new Error('`class` property may not be updated. Use the `classes` property for conditional css classes.');
-			}
-		}
-		else if (propName === 'classes') {
-			const classList = (domNode as Element).classList;
-			const classNames = Object.keys(propValue);
-			const classNameCount = classNames.length;
-			for (let j = 0; j < classNameCount; j++) {
-				const className = classNames[j];
-				const on = !!propValue[className];
-				const previousOn = !!previousValue[className];
-				if (on === previousOn) {
-					continue;
-				}
-				propertiesUpdated = true;
-				if (on) {
-					classList.add(className);
+		if (propName === 'classes') {
+			if (previousProperties.classes && previousProperties.classes.length > 0) {
+				if (!propValue || propValue.length === 0) {
+					for (let i = 0; i < previousProperties.classes.length; i++) {
+						(domNode as Element).classList.remove(previousProperties.classes[i]);
+					}
 				}
 				else {
-					classList.remove(className);
+					const newClasses = [ ...propValue ];
+					for (let i = 0; i < previousProperties.classes.length; i++) {
+						const previousClass = previousProperties.classes[i];
+						const classIndex = newClasses.indexOf(previousClass);
+						if (classIndex === -1) {
+							(domNode as Element).classList.remove(previousClass);
+						}
+						else {
+							newClasses.splice(classIndex, 1);
+						}
+					}
+					for (let i = 0; i < newClasses.length; i++) {
+						(domNode as Element).classList.add(newClasses[i]);
+					}
+				}
+			}
+			else {
+				for (let i = 0; i < propValue.length; i++) {
+					(domNode as Element).classList.add(propValue[i]);
 				}
 			}
 		}
