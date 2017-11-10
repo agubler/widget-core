@@ -159,6 +159,7 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 		private _rootTagName: string;
 		private _attachType: AttachType;
 		private _handles: Function[] = [];
+		private _renderedNodes: DNode | DNode[];
 
 		constructor(...args: any[]) {
 			super(...args);
@@ -218,6 +219,7 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 			if (this.projectorState === ProjectorAttachState.Attached) {
 				this.__setProperties__(this._projectorProperties);
 				this.__setChildren__(this._projectorChildren);
+				this._renderedNodes = this.__render__();
 				if (!this._scheduled && !this._paused) {
 					if (this._async) {
 						this._scheduled = global.requestAnimationFrame(this._boundDoRender);
@@ -317,7 +319,7 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 			this._scheduled = undefined;
 
 			if (this._projection) {
-				this._projection.update(this._boundRender());
+				this._projection.update(this._renderedNodes);
 			}
 		}
 
