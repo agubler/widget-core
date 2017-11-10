@@ -155,7 +155,7 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> implement
 	 * @param element The dom node represented by the vdom node.
 	 * @param key The vdom node's key.
 	 */
-	public onElementCreated(element: Element, key: string): void {
+	public onElementCreated(element: Element, key: string | number): void {
 		// Do nothing by default.
 	}
 
@@ -165,8 +165,16 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> implement
 	 * @param element The dom node represented by the vdom node.
 	 * @param key The vdom node's key.
 	 */
-	public onElementUpdated(element: Element, key: string): void {
+	public onElementUpdated(element: Element, key: string | number): void {
 		// Do nothing by default.
+	}
+
+	public onElementRemoved(key: string | number) {
+		// Do nothing by default
+	}
+
+	public onWidgetRemoved() {
+		// Do nothing by default
 	}
 
 	public get properties(): Readonly<P> & Readonly<WidgetProperties> {

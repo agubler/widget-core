@@ -451,7 +451,34 @@ function nodeAdded(dnode: InternalDNode, transitions: TransitionStrategy) {
 	}
 }
 
-function nodeToRemove(dnode: InternalDNode, transitions: TransitionStrategy, projectionOptions: ProjectionOptions) {
+function callOnWidgetRemoved(dNodes: InternalDNode | InternalDNode[], parentInstance: WidgetBase): void {
+	dNodes = Array.isArray(dNodes) ? dNodes : [ dNodes ];
+	for (let i = 0; i < dNodes.length; i++) {
+		const dNode = dNodes[i];
+		if (isWNode(dNode)) {
+			callOnWidgetRemoved(dNode.rendered, dNode.instance);
+			dNode.instance.onWidgetRemoved();
+		}
+		else {
+			if (dNode.children) {
+				callOnWidgetRemoved(dNode.children as InternalDNode[], parentInstance);
+			}
+			if (dNode.properties.key !== null && dNode.properties.key !== undefined) {
+				parentInstance.onElementRemoved(dNode.properties.key as any);
+			}
+		}
+	}
+}
+
+function nodeToRemove(
+	dnode: InternalDNode,
+	transitions: TransitionStrategy,
+	projectionOptions: ProjectionOptions,
+	parentInstance: WidgetBase
+) {
+	projectionOptions.afterRenderCallbacks.push(() => {
+		callOnWidgetRemoved(dnode, parentInstance);
+	});
 	if (isWNode(dnode)) {
 		const rendered = dnode.rendered || emptyArray;
 		for (let i = 0; i < rendered.length; i++) {
@@ -460,7 +487,7 @@ function nodeToRemove(dnode: InternalDNode, transitions: TransitionStrategy, pro
 				child.domNode!.parentNode!.removeChild(child.domNode!);
 			}
 			else {
-				nodeToRemove(child, transitions, projectionOptions);
+				nodeToRemove(child, transitions, projectionOptions, child.instance);
 			}
 		}
 	}
@@ -553,7 +580,7 @@ function updateChildren(
 			const findOldIndex = findIndexOfChild(oldChildren, newChild, oldIndex + 1);
 			if (findOldIndex >= 0) {
 				for (i = oldIndex; i < findOldIndex; i++) {
-					nodeToRemove(oldChildren[i], transitions, projectionOptions);
+					nodeToRemove(oldChildren[i], transitions, projectionOptions, parentInstance);
 					checkDistinguishable(oldChildren, i, domNode, 'removed');
 				}
 				textUpdated = updateDom(oldChildren[findOldIndex], newChild, projectionOptions, domNode, parentInstance) || textUpdated;
@@ -583,7 +610,7 @@ function updateChildren(
 	if (oldChildrenLength > oldIndex) {
 		// Remove child fragments
 		for (i = oldIndex; i < oldChildrenLength; i++) {
-			nodeToRemove(oldChildren[i], transitions, projectionOptions);
+			nodeToRemove(oldChildren[i], transitions, projectionOptions, parentInstance);
 			checkDistinguishable(oldChildren, i, domNode, 'removed');
 		}
 	}
