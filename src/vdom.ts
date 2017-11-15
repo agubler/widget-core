@@ -937,23 +937,5 @@ export const dom = {
 		runDeferredRenderCallbacks(finalProjectorOptions);
 		runAfterRenderCallbacks(finalProjectorOptions);
 		return createProjection(decoratedNode, instance, finalProjectorOptions);
-	},
-	replace: function(element: Element, dNode: RenderResult, instance: DefaultWidgetBaseInterface, projectionOptions?: Partial<ProjectionOptions>): Projection {
-		if (Array.isArray(dNode)) {
-			throw new Error('Unable to replace a node with an array of nodes. (consider adding one extra level to the virtual DOM)');
-		}
-		const finalProjectorOptions = getProjectionOptions(projectionOptions);
-		const decoratedNode = filterAndDecorateChildren(dNode, instance)[0] as InternalHNode;
-		finalProjectorOptions.rootNode = element.parentNode! as Element;
-		createDom(decoratedNode, element.parentNode!, element, finalProjectorOptions, instance);
-		const instanceData = widgetInstanceMap.get(instance)!;
-		instanceData.nodeHandler.addRoot();
-		finalProjectorOptions.afterRenderCallbacks.push(() => {
-			instanceData.onAttach();
-		});
-		runDeferredRenderCallbacks(finalProjectorOptions);
-		runAfterRenderCallbacks(finalProjectorOptions);
-		element.parentNode!.removeChild(element);
-		return createProjection(decoratedNode, instance, finalProjectorOptions);
 	}
 };

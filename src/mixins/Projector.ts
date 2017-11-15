@@ -24,15 +24,13 @@ export enum ProjectorAttachState {
  */
 export enum AttachType {
 	Append = 1,
-	Merge = 2,
-	Replace = 3
+	Merge = 2
 }
 
 export interface AttachOptions {
 
 	/**
-	 * If `'append'` it will appended to the root. If `'merge'` it will merged with the root. If `'replace'` it will
-	 * replace the root.
+	 * If `'append'` it will appended to the root. If `'merge'` it will merged with the root.
 	 */
 	type: AttachType;
 
@@ -63,11 +61,6 @@ export interface ProjectorMixin<P> {
 	 * @param root The root element that the root virtual DOM node will be merged with.  Defaults to `document.body`.
 	 */
 	merge(root?: Element): Handle;
-
-	/**
-	 * Replace the root with the projector node.
-	 */
-	replace(root?: Element): Handle;
 
 	/**
 	 * Pause the projector.
@@ -190,15 +183,6 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 		public merge(root?: Element): Handle {
 			const options = {
 				type: AttachType.Merge,
-				root
-			};
-
-			return this._attach(options);
-		}
-
-		public replace(root?: Element): Handle  {
-			const options = {
-				type: AttachType.Replace,
 				root
 			};
 
@@ -371,9 +355,6 @@ export function ProjectorMixin<P, T extends Constructor<WidgetBase<P>>>(Base: T)
 				case AttachType.Merge:
 					this._rootTagName = this._root.tagName.toLowerCase();
 					this._projection = dom.merge(this.root, this._boundRender(), this , this._projectionOptions);
-				break;
-				case AttachType.Replace:
-					this._projection = dom.replace(this.root, this._boundRender(), this, this._projectionOptions);
 				break;
 			}
 
