@@ -187,55 +187,6 @@ function removeClasses(domNode: Node, classes: SupportedClassName) {
 	}
 }
 
-function setProperties(domNode: Node, properties: VirtualDomProperties, projectionOptions: ProjectionOptions) {
-	const propNames = Object.keys(properties);
-	const propCount = propNames.length;
-	for (let i = 0; i < propCount; i++) {
-		const propName = propNames[i];
-		let propValue = properties[propName];
-		if (propName === 'classes') {
-			const currentClasses = Array.isArray(propValue) ? propValue : [ propValue ];
-			if (!(domNode as Element).className) {
-				(domNode as Element).className = currentClasses.join(' ').trim();
-			}
-			else {
-				for (let i = 0; i < currentClasses.length; i++) {
-					addClasses(domNode, currentClasses[i]);
-				}
-			}
-		}
-		else if (propName === 'styles') {
-			const styleNames = Object.keys(propValue);
-			const styleCount = styleNames.length;
-			for (let j = 0; j < styleCount; j++) {
-				const styleName = styleNames[j];
-				const styleValue = propValue[styleName];
-				if (styleValue) {
-					checkStyleValue(styleValue);
-					projectionOptions.styleApplyer!(domNode as HTMLElement, styleName, styleValue);
-				}
-			}
-		}
-		else if (propName !== 'key' && propValue !== null && propValue !== undefined) {
-			const type = typeof propValue;
-			if (type === 'function' && propName.lastIndexOf('on', 0) === 0) {
-				updateEvents(domNode, propName, properties, projectionOptions);
-			}
-			else if (type === 'string' && propName !== 'value' && propName !== 'innerHTML') {
-				if (projectionOptions.namespace === NAMESPACE_SVG && propName === 'href') {
-					(domNode as Element).setAttributeNS(NAMESPACE_XLINK, propName, propValue);
-				}
-				else {
-					(domNode as Element).setAttribute(propName, propValue);
-				}
-			}
-			else {
-				(domNode as any)[propName] = propValue;
-			}
-		}
-	}
-}
-
 function removeOrphanedEvents(
 	domNode: Node,
 	previousProperties: VirtualDomProperties,
@@ -321,7 +272,7 @@ function updateProperties(
 			for (let j = 0; j < styleCount; j++) {
 				const styleName = styleNames[j];
 				const newStyleValue = propValue[styleName];
-				const oldStyleValue = previousValue[styleName];
+				const oldStyleValue = previousValue && previousValue[styleName];
 				if (newStyleValue === oldStyleValue) {
 					continue;
 				}
@@ -690,7 +641,7 @@ function initPropertiesAndChildren(
 	if (typeof dnode.deferredPropertiesCallback === 'function') {
 		addDeferredProperties(dnode, projectionOptions);
 	}
-	setProperties(domNode, dnode.properties, projectionOptions);
+	updateProperties(domNode, {}, dnode.properties, projectionOptions);
 	if (dnode.properties.key !== null && dnode.properties.key !== undefined) {
 		const instanceData = widgetInstanceMap.get(parentInstance)!;
 		instanceData.nodeHandler.add(domNode as HTMLElement, `${dnode.properties.key}`);
