@@ -1,5 +1,4 @@
-import { Evented } from '@dojo/core/Evented';
-import Map from '@dojo/shim/Map';
+import { Evented } from './Evented';
 import { NodeHandlerInterface } from './interfaces';
 
 /**

@@ -1,6 +1,3 @@
-import { assign } from '@dojo/core/lang';
-import { from as arrayFrom } from '@dojo/shim/array';
-import global from '@dojo/shim/global';
 import { Constructor, DNode, HNode, VirtualDomProperties, WidgetProperties } from './interfaces';
 import { WidgetBase } from './WidgetBase';
 import { v, w } from './d';
@@ -190,7 +187,7 @@ function getWidgetPropertyFromAttribute(attributeName: string, attributeValue: s
 	return [ propertyName, value ];
 }
 
-export let customEventClass = global.CustomEvent;
+export let customEventClass = (window as any).CustomEvent;
 
 if (typeof customEventClass !== 'function') {
 	const customEvent = function (event: string, params: any) {
@@ -200,8 +197,8 @@ if (typeof customEventClass !== 'function') {
 		return evt;
 	};
 
-	if (global.Event) {
-		customEvent.prototype = global.Event.prototype;
+	if ((window as any).Event) {
+		customEvent.prototype = (window as any).Event.prototype;
 	}
 
 	customEventClass = customEvent;
@@ -241,9 +238,9 @@ export function initializeElement(element: CustomElement) {
 			},
 			set(value: any) {
 				const [ propertyName, propertyValue ] = getWidgetPropertyFromAttribute(attribute.attributeName, value, attribute);
-				element.getWidgetInstance().setProperties(assign({}, element.getWidgetInstance().properties, {
+				element.getWidgetInstance().setProperties({ ...element.getWidgetInstance().properties, ...{
 					[propertyName]: propertyValue
-				}));
+				}});
 			}
 		};
 
@@ -261,11 +258,10 @@ export function initializeElement(element: CustomElement) {
 			},
 
 			set(value: any) {
-				element.getWidgetInstance().setProperties(assign(
-					{},
-					element.getWidgetInstance().properties,
-					{ [widgetPropertyName]: setValue ? setValue(value) : value }
-				));
+				element.getWidgetInstance().setProperties({
+					...element.getWidgetInstance().properties,
+					...{ [widgetPropertyName]: setValue ? setValue(value) : value }
+				});
 			}
 		};
 
@@ -298,7 +294,7 @@ export function initializeElement(element: CustomElement) {
 
 	return function() {
 		let children: DNode[] = [];
-		let elementChildren = arrayFrom(element.children);
+		let elementChildren = Array.from(element.children);
 
 		elementChildren.forEach((childNode: CustomElement, index: number) => {
 			const properties = { key: `child-${index}` };
@@ -314,7 +310,7 @@ export function initializeElement(element: CustomElement) {
 		});
 
 		widgetInstance.setChildren(children);
-		widgetInstance.append(element);
+		widgetInstance.merge(element);
 	};
 }
 
@@ -332,11 +328,10 @@ export function handleAttributeChanged(element: CustomElement, name: string, new
 	attributes.forEach((attribute) => {
 		if (attribute.attributeName === name) {
 			const [ propertyName, propertyValue ] = getWidgetPropertyFromAttribute(name, newValue, attribute);
-			element.getWidgetInstance().setProperties(assign(
-				{},
-				element.getWidgetInstance().properties,
-				{ [propertyName]: propertyValue }
-			));
+			element.getWidgetInstance().setProperties({
+				...element.getWidgetInstance().properties,
+				...{ [propertyName]: propertyValue }
+			});
 		}
 	});
 }

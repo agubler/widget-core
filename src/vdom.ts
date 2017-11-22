@@ -1,4 +1,3 @@
-import global from '@dojo/shim/global';
 import {
 	CoreProperties,
 	DefaultWidgetBaseInterface,
@@ -11,10 +10,8 @@ import {
 	TransitionStrategy,
 	VirtualDomProperties
 } from './interfaces';
-import { from as arrayFrom } from '@dojo/shim/array';
 import { isWNode, isHNode, HNODE } from './d';
 import { isWidgetBaseConstructor } from './Registry';
-import WeakMap from '@dojo/shim/WeakMap';
 import NodeHandler from './NodeHandler';
 import RegistryHandler from './RegistryHandler';
 
@@ -183,55 +180,6 @@ function removeClasses(domNode: Node, classes: SupportedClassName) {
 		const classNames = classes.split(' ');
 		for (let i = 0; i < classNames.length; i++) {
 			(domNode as Element).classList.remove(classNames[i]);
-		}
-	}
-}
-
-function setProperties(domNode: Node, properties: VirtualDomProperties, projectionOptions: ProjectionOptions) {
-	const propNames = Object.keys(properties);
-	const propCount = propNames.length;
-	for (let i = 0; i < propCount; i++) {
-		const propName = propNames[i];
-		let propValue = properties[propName];
-		if (propName === 'classes') {
-			const currentClasses = Array.isArray(propValue) ? propValue : [ propValue ];
-			if (!(domNode as Element).className) {
-				(domNode as Element).className = currentClasses.join(' ').trim();
-			}
-			else {
-				for (let i = 0; i < currentClasses.length; i++) {
-					addClasses(domNode, currentClasses[i]);
-				}
-			}
-		}
-		else if (propName === 'styles') {
-			const styleNames = Object.keys(propValue);
-			const styleCount = styleNames.length;
-			for (let j = 0; j < styleCount; j++) {
-				const styleName = styleNames[j];
-				const styleValue = propValue[styleName];
-				if (styleValue) {
-					checkStyleValue(styleValue);
-					projectionOptions.styleApplyer!(domNode as HTMLElement, styleName, styleValue);
-				}
-			}
-		}
-		else if (propName !== 'key' && propValue !== null && propValue !== undefined) {
-			const type = typeof propValue;
-			if (type === 'function' && propName.lastIndexOf('on', 0) === 0) {
-				updateEvents(domNode, propName, properties, projectionOptions);
-			}
-			else if (type === 'string' && propName !== 'value' && propName !== 'innerHTML') {
-				if (projectionOptions.namespace === NAMESPACE_SVG && propName === 'href') {
-					(domNode as Element).setAttributeNS(NAMESPACE_XLINK, propName, propValue);
-				}
-				else {
-					(domNode as Element).setAttribute(propName, propValue);
-				}
-			}
-			else {
-				(domNode as any)[propName] = propValue;
-			}
 		}
 	}
 }
@@ -537,15 +485,8 @@ function checkDistinguishable(
 			if (i !== indexToCheck) {
 				const node = childNodes[i];
 				if (same(node, childNode)) {
-					let nodeIdentifier: string;
 					const parentName = (parentInstance as any).constructor.name || 'unknown';
-					if (isWNode(childNode)) {
-						nodeIdentifier = (childNode.widgetConstructor as any).name || 'unknown';
-					}
-					else {
-						nodeIdentifier = childNode.tag;
-					}
-
+					const nodeIdentifier = isWNode(childNode) ? (childNode.widgetConstructor as any).name || 'unknown' : childNode.tag;
 					console.warn(`A widget (${parentName}) has had a child addded or removed, but they were not able to uniquely identified. It is recommended to provide a unique 'key' property when using the same widget or element (${nodeIdentifier}) multiple times as siblings`);
 					break;
 				}
@@ -656,7 +597,7 @@ function addChildren(
 	}
 
 	if (projectionOptions.merge && childNodes === undefined) {
-		childNodes = arrayFrom(parentHNode.domNode!.childNodes);
+		childNodes = Array.from(parentHNode.domNode!.childNodes);
 	}
 
 	for (let i = 0; i < children.length; i++) {
@@ -690,7 +631,7 @@ function initPropertiesAndChildren(
 	if (typeof dnode.deferredPropertiesCallback === 'function') {
 		addDeferredProperties(dnode, projectionOptions);
 	}
-	setProperties(domNode, dnode.properties, projectionOptions);
+	updateProperties(domNode, { classes: [], styles: {} }, dnode.properties, projectionOptions);
 	if (dnode.properties.key !== null && dnode.properties.key !== undefined) {
 		const instanceData = widgetInstanceMap.get(parentInstance)!;
 		instanceData.nodeHandler.add(domNode as HTMLElement, `${dnode.properties.key}`);
@@ -883,7 +824,7 @@ function runDeferredRenderCallbacks(projectionOptions: ProjectionOptions) {
 			}
 		}
 		else {
-			global.requestAnimationFrame(() => {
+			window.requestAnimationFrame(() => {
 				while (projectionOptions.deferredRenderCallbacks.length) {
 					const callback = projectionOptions.deferredRenderCallbacks.shift();
 					callback && callback();
@@ -901,8 +842,8 @@ function runAfterRenderCallbacks(projectionOptions: ProjectionOptions) {
 		}
 	}
 	else {
-		if (global.requestIdleCallback) {
-			global.requestIdleCallback(() => {
+		if ((window as any).requestIdleCallback) {
+			(window as any).requestIdleCallback(() => {
 				while (projectionOptions.afterRenderCallbacks.length) {
 					const callback = projectionOptions.afterRenderCallbacks.shift();
 					callback && callback();
@@ -940,21 +881,6 @@ function createProjection(dnode: InternalDNode | InternalDNode[], parentInstance
 }
 
 export const dom = {
-	create: function(dNode: RenderResult, instance: DefaultWidgetBaseInterface, projectionOptions?: Partial<ProjectionOptions>): Projection {
-		const finalProjectorOptions = getProjectionOptions(projectionOptions);
-		const rootNode = document.createElement('div');
-		finalProjectorOptions.rootNode = rootNode;
-		const decoratedNode = filterAndDecorateChildren(dNode, instance);
-		addChildren(toParentHNode(finalProjectorOptions.rootNode), decoratedNode, finalProjectorOptions, instance, undefined);
-		const instanceData = widgetInstanceMap.get(instance)!;
-		instanceData.nodeHandler.addRoot();
-		finalProjectorOptions.afterRenderCallbacks.push(() => {
-			instanceData.onAttach();
-		});
-		runDeferredRenderCallbacks(finalProjectorOptions);
-		runAfterRenderCallbacks(finalProjectorOptions);
-		return createProjection(decoratedNode, instance, finalProjectorOptions);
-	},
 	append: function(parentNode: Element, dNode: RenderResult, instance: DefaultWidgetBaseInterface, projectionOptions?: Partial<ProjectionOptions>): Projection {
 		const finalProjectorOptions = getProjectionOptions(projectionOptions);
 		finalProjectorOptions.rootNode = parentNode;
@@ -986,24 +912,6 @@ export const dom = {
 		});
 		runDeferredRenderCallbacks(finalProjectorOptions);
 		runAfterRenderCallbacks(finalProjectorOptions);
-		return createProjection(decoratedNode, instance, finalProjectorOptions);
-	},
-	replace: function(element: Element, dNode: RenderResult, instance: DefaultWidgetBaseInterface, projectionOptions?: Partial<ProjectionOptions>): Projection {
-		if (Array.isArray(dNode)) {
-			throw new Error('Unable to replace a node with an array of nodes. (consider adding one extra level to the virtual DOM)');
-		}
-		const finalProjectorOptions = getProjectionOptions(projectionOptions);
-		const decoratedNode = filterAndDecorateChildren(dNode, instance)[0] as InternalHNode;
-		finalProjectorOptions.rootNode = element.parentNode! as Element;
-		createDom(decoratedNode, toParentHNode(finalProjectorOptions.rootNode), element, finalProjectorOptions, instance);
-		const instanceData = widgetInstanceMap.get(instance)!;
-		instanceData.nodeHandler.addRoot();
-		finalProjectorOptions.afterRenderCallbacks.push(() => {
-			instanceData.onAttach();
-		});
-		runDeferredRenderCallbacks(finalProjectorOptions);
-		runAfterRenderCallbacks(finalProjectorOptions);
-		element.parentNode!.removeChild(element);
 		return createProjection(decoratedNode, instance, finalProjectorOptions);
 	}
 };

@@ -1,4 +1,3 @@
-import WeakMap from '@dojo/shim/WeakMap';
 import { WidgetBase } from './../WidgetBase';
 import { handleDecorator } from './handleDecorator';
 import { Injector } from './../Injector';

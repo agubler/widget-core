@@ -1,5 +1,4 @@
-import { Map } from '@dojo/shim/Map';
-import { Evented } from '@dojo/core/Evented';
+import { Evented } from './Evented';
 import { Constructor, RegistryLabel, WidgetBaseInterface } from './interfaces';
 import { Registry, RegistryEventObject, RegistryItem } from './Registry';
 import { Injector } from './Injector';
@@ -12,7 +11,6 @@ export class RegistryHandler extends Evented {
 
 	constructor() {
 		super();
-		this.own(this._registry);
 	}
 
 	public set base(baseRegistry: Registry) {
@@ -58,12 +56,11 @@ export class RegistryHandler extends Evented {
 				return item;
 			}
 			else if (registeredLabels.indexOf(label) === -1) {
-				const handle = registry.on(label, (event: RegistryEventObject) => {
+				registry.on(label, (event: RegistryEventObject) => {
 					if (event.action === 'loaded' && (this as any)[getFunctionName](label, globalPrecedence) === event.item) {
 						this.emit({ type: 'invalidate' });
 					}
 				});
-				this.own(handle);
 				labelMap.set(registry, [ ...registeredLabels, label]);
 			}
 		}

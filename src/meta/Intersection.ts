@@ -1,7 +1,3 @@
-import global from '@dojo/shim/global';
-import WeakMap from '@dojo/shim/WeakMap';
-import Map from '@dojo/shim/Map';
-import { createHandle } from '@dojo/core/lang';
 import { Base } from './Base';
 
 import 'intersection-observer';
@@ -76,11 +72,10 @@ export class Intersection extends Base {
 
 	private _createDetails(options: IntersectionGetOptions, rootNode?: HTMLElement): IntersectionDetail {
 		const entries = new WeakMap<HTMLElement, ExtendedIntersectionObserverEntry>();
-		const observer = new global.IntersectionObserver(this._onIntersect(entries), { ...options, root: rootNode });
+		const observer = new IntersectionObserver(this._onIntersect(entries), { ...options, root: rootNode });
 		const details = { observer, entries, ...options };
 
 		this._details.set(JSON.stringify(options), details);
-		this.own(createHandle(observer.disconnect));
 		return details;
 	}
 

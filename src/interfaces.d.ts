@@ -1,8 +1,4 @@
-import { Destroyable } from '@dojo/core/Destroyable';
-import { Evented } from '@dojo/core/Evented';
-import { EventTargettedObject } from '@dojo/interfaces/core';
-import Map from '@dojo/shim/Map';
-import WeakMap from '@dojo/shim/WeakMap';
+import { Evented } from './Evented';
 
 /**
  * Generic constructor type
@@ -440,7 +436,7 @@ export interface WidgetBaseInterface<
 /**
  * Meta Base type
  */
-export interface WidgetMetaBase extends Destroyable {
+export interface WidgetMetaBase {
 	has(key: string | number): boolean;
 	afterRender(): void;
 }

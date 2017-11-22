@@ -22,14 +22,7 @@
     "url": "https://github.com/dojo/widget-core.git"
   },
   "scripts": {
-    "prepublish": "grunt peerDepInstall",
     "test": "grunt test"
-  },
-  "peerDependencies": {
-    "@dojo/core": "~0.2.1",
-    "@dojo/has": "~0.1.0",
-    "@dojo/i18n": "~0.2.0",
-    "@dojo/shim": "~0.2.2"
   },
   "devDependencies": {
     "@dojo/interfaces": "~0.1.0",

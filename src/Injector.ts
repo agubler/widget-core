@@ -1,11 +1,11 @@
-import { Evented } from '@dojo/core/Evented';
+import { Evented } from './Evented';
 
 export class Injector<T = any> extends Evented {
 
 	private _payload: T;
 
 	constructor(payload: T) {
-		super({});
+		super();
 		this._payload = payload;
 	}
 

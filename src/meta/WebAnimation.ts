@@ -1,8 +1,6 @@
 import 'web-animations-js/web-animations-next-lite.min';
 import { Base } from './Base';
 import { AnimationControls, AnimationProperties, AnimationInfo } from '../interfaces';
-import Map from '@dojo/shim/Map';
-import global from '@dojo/shim/global';
 
 export interface AnimationPlayer {
 	player: Animation;
@@ -27,7 +25,7 @@ export class WebAnimations extends Base {
 			timing
 		);
 
-		return new Animation(keyframeEffect, global.document.timeline);
+		return new Animation(keyframeEffect, document.timeline);
 	}
 
 	private _updatePlayer(player: Animation, controls: AnimationControls) {

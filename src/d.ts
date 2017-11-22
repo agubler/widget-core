@@ -1,4 +1,3 @@
-import Symbol from '@dojo/shim/Symbol';
 import {
 	Constructor,
 	DefaultWidgetBaseInterface,

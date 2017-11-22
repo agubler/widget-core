@@ -1,6 +1,3 @@
-import { EventTypedObject } from '@dojo/interfaces/core';
-import Map from '@dojo/shim/Map';
-import WeakMap from '@dojo/shim/WeakMap';
 import { v } from './d';
 import { auto } from './diff';
 import {
@@ -39,7 +36,7 @@ interface ReactionFunctionConfig {
 	reaction: DiffPropertyReaction;
 }
 
-export interface WidgetAndElementEvent extends EventTypedObject<'properties:changed'> {
+export interface WidgetAndElementEvent {
 	key: string;
 	element: HTMLElement;
 	target: WidgetBase;

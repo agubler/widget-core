@@ -1,5 +1,4 @@
 import { Base } from './Base';
-import { deepAssign } from '@dojo/core/lang';
 
 export interface TopLeft {
 	left: number;
@@ -54,7 +53,12 @@ export class Dimensions extends Base {
 		const node = this.getNode(key);
 
 		if (!node) {
-			return deepAssign({}, defaultDimensions);
+			return {
+				offset: { ...defaultDimensions.offset },
+				position: { ...defaultDimensions.position },
+				scroll: { ...defaultDimensions.scroll },
+				size: { ...defaultDimensions.size }
+			};
 		}
 
 		const boundingDimensions = node.getBoundingClientRect();

@@ -12,6 +12,7 @@
 			"es2015.iterable",
 			"es2015.promise",
 			"es2015.symbol",
+			"esnext",
 			"es2015.symbol.wellknown"
 		],
 		"module": "umd",
@@ -26,13 +27,10 @@
 		"sourceMap": true,
 		"strictNullChecks": true,
 		"target": "es5",
-		"types": [ "intern", "web-animations-js" ]
+		"types": [ "web-animations-js" ]
 	},
 	"include": [
 		"./src/**/*.ts",
-		"./src/**/*.tsx",
-		"./tests/**/*.ts",
-		"./tests/**/*.tsx",
-		"./typings/index.d.ts"
+		"./src/**/*.tsx"
 	]
 }

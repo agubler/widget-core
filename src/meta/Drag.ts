@@ -1,7 +1,3 @@
-import { deepAssign } from '@dojo/core/lang';
-import global from '@dojo/shim/global';
-import { assign } from '@dojo/shim/object';
-import WeakMap from '@dojo/shim/WeakMap';
 import { Base } from './Base';
 
 export interface DragResults {
@@ -61,9 +57,26 @@ export interface PositionMatrix {
 	screen: Position;
 }
 
+function clonePositionMatrix(positionMatrix: PositionMatrix): PositionMatrix {
+	return {
+		client: { ...positionMatrix.client },
+		offset: { ...positionMatrix.offset },
+		page: { ...positionMatrix.page },
+		screen: { ...positionMatrix.screen }
+	};
+}
+
+function closeDragResults(dragResults: DragResults): DragResults {
+	return {
+		delta: { ...dragResults.delta },
+		start: dragResults.start ? clonePositionMatrix(dragResults.start) : undefined,
+		isDragging: dragResults.isDragging
+	};
+}
+
 function createNodeData(invalidate: () => void): NodeData {
 	return {
-		dragResults: deepAssign({}, emptyResults),
+		dragResults: emptyResults,
 		invalidate,
 		last: createPositionMatrix(),
 		start: createPositionMatrix()
@@ -179,7 +192,7 @@ class DragController {
 			this._dragging = target;
 			state.last = state.start = getPositionMatrix(event);
 			state.dragResults.delta = createPosition();
-			state.dragResults.start = deepAssign({}, state.start);
+			state.dragResults.start = clonePositionMatrix(state.start);
 			state.dragResults.isDragging = true;
 			state.invalidate();
 		} // else, we are ignoring the event
@@ -195,7 +208,7 @@ class DragController {
 		state.last = getPositionMatrix(event);
 		state.dragResults.delta = getDelta(state.start, state.last);
 		if (!state.dragResults.start) {
-			state.dragResults.start = deepAssign({}, state.start);
+			state.dragResults.start = clonePositionMatrix(state.start);
 		}
 		state.invalidate();
 	}
@@ -210,7 +223,7 @@ class DragController {
 		state.last = getPositionMatrix(event);
 		state.dragResults.delta = getDelta(state.start, state.last);
 		if (!state.dragResults.start) {
-			state.dragResults.start = deepAssign({}, state.start);
+			state.dragResults.start = clonePositionMatrix(state.start);
 		}
 		state.dragResults.isDragging = false;
 		state.invalidate();
@@ -218,7 +231,7 @@ class DragController {
 	}
 
 	constructor() {
-		const win: Window = global.window;
+		const win: Window = window;
 		win.addEventListener('pointerdown', this._onDragStart);
 		// Use capture phase, to determine the right node target, as it will be top down versus bottom up
 		win.addEventListener('pointermove', this._onDrag, true);
@@ -236,7 +249,7 @@ class DragController {
 
 		const state = _nodeMap.get(node)!;
 		// shallow "clone" the results, so no downstream manipulation can occur
-		const dragResults = assign({}, state.dragResults);
+		const dragResults = closeDragResults(state.dragResults);
 		// we are offering up an accurate delta, so we need to take the last event position and move it to the start so
 		// that our deltas are calculated from the last time they are read
 		state.start = state.last;
