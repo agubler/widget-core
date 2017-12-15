@@ -194,17 +194,6 @@ function removeClasses(domNode: Element, classes: SupportedClassName) {
 	}
 }
 
-function callExtras(
-	extras: VNodePropertyExtras[],
-	domNode: Element,
-	previousProperties: VNodeProperties,
-	properties: VNodeProperties
-) {
-	extras.forEach(({ apply }) => {
-		apply.call(properties.bind, domNode, previousProperties, properties);
-	});
-}
-
 function setProperties(domNode: Element, properties: VNodeProperties, projectionOptions: ProjectionOptions) {
 	const propNames = Object.keys(properties);
 	const propCount = propNames.length;
@@ -307,7 +296,7 @@ function updateProperties(
 		if (isApplicator(propValue)) {
 			propValue.apply.call(properties.bind, domNode, previousProperties, properties);
 		}
-		if (propName === 'classes') {
+		else if (propName === 'classes') {
 			const previousClasses = Array.isArray(previousValue) ? previousValue : [ previousValue ];
 			const currentClasses = Array.isArray(propValue) ? propValue : [ propValue ];
 			if (previousClasses && previousClasses.length > 0) {
@@ -360,9 +349,6 @@ function updateProperties(
 					projectionOptions.styleApplyer!(domNode as HTMLElement, styleName, '');
 				}
 			}
-		}
-		else if (propName === 'extras') {
-			callExtras(properties[propName]!, domNode, previousProperties, properties);
 		}
 		else {
 			if (!propValue && typeof previousValue === 'string') {
