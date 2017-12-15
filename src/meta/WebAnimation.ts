@@ -1,5 +1,5 @@
 import 'web-animations-js/web-animations-next-lite.min';
-import { Base } from './Base';
+import { BaseWithSet } from './Base';
 import Map from '@dojo/shim/Map';
 import global from '@dojo/shim/global';
 
@@ -58,7 +58,7 @@ export interface AnimationPlayer {
 	used: boolean;
 }
 
-export class WebAnimations extends Base {
+export class WebAnimations extends BaseWithSet {
 
 	private _animationMap = new Map<string, AnimationPlayer>();
 
@@ -132,14 +132,18 @@ export class WebAnimations extends Base {
 		}
 	}
 
-	animate(key: string, animateProperties: AnimationProperties | AnimationProperties[]) {
+	animate(key: string, properties: AnimationProperties | AnimationProperties[]) {
+		this.set(key, properties);
+	}
+
+	set(key: string, properties: AnimationProperties | AnimationProperties[]): void {
 		const node = this.getNode(key) as HTMLElement;
 
 		if (node) {
-			if (!Array.isArray(animateProperties)) {
-				animateProperties = [ animateProperties ];
+			if (!Array.isArray(properties)) {
+				properties = [ properties ];
 			}
-			animateProperties.forEach((properties) => {
+			properties.forEach((properties) => {
 				properties = typeof properties === 'function' ? properties() : properties;
 
 				if (properties) {

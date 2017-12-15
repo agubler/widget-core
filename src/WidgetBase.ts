@@ -6,10 +6,12 @@ import {
 	AfterRender,
 	BeforeProperties,
 	BeforeRender,
+	Constructor,
 	CoreProperties,
 	DiffPropertyReaction,
 	DNode,
 	Render,
+	VNodePropertyExtras,
 	WidgetMetaBase,
 	WidgetMetaConstructor,
 	WidgetBaseInterface,
@@ -19,6 +21,7 @@ import RegistryHandler from './RegistryHandler';
 import NodeHandler from './NodeHandler';
 import { widgetInstanceMap } from './vdom';
 import { isWidgetBaseConstructor, WIDGET_BASE_TYPE } from './Registry';
+import { BaseWithSet } from './meta/Base';
 
 enum WidgetRenderState {
 	IDLE = 1,
@@ -42,6 +45,25 @@ export type BoundFunctionData = { boundFunc: (...args: any[]) => any, scope: any
 
 const decoratorMap = new Map<Function, Map<string, any[]>>();
 const boundAuto = auto.bind(null);
+
+/**
+ *
+ * @param Meta
+ * @param properties
+ */
+export function meta<T extends BaseWithSet>(Meta: Constructor<T>, properties: T['properties']): VNodePropertyExtras {
+	return {
+		beforeCallback(this: any, virtualDomProperties: VirtualDomProperties) {
+			const { key } = virtualDomProperties;
+			if (key) {
+				this.meta(Meta).set(key, properties);
+			}
+			else {
+				console.warn('Cannot apply meta for a node without a key');
+			}
+		}
+	};
+}
 
 /**
  * Main widget base for all widgets to extend

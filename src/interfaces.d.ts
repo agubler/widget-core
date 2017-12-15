@@ -114,6 +114,7 @@ export interface VNodeProperties {
 	 * @param previousProperties - The previous properties object that was supplied to the [[h]] method
 	 */
 	updateAnimation?: (element: Element, properties?: VNodeProperties, previousProperties?: VNodeProperties) => void;
+
 	/**
 	 * Bind should not be defined.
 	 */
