@@ -87,6 +87,14 @@ export type SupportedClassName = string | null | undefined;
 
 export type DeferredVirtualProperties = (inserted: boolean) => VNodeProperties;
 
+interface VNodePropertyExtras {
+	apply(
+		domNode: Element,
+		previousProperties: VNodeProperties,
+		properties: VNodeProperties
+	): void;
+}
+
 export interface VNodeProperties {
 	/**
 	 * The animation to perform when this node is added to an already existing parent.

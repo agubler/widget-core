@@ -10,7 +10,7 @@ import { handleDecorator } from './../../src/decorators/handleDecorator';
 import { diffProperty } from './../../src/decorators/diffProperty';
 import { Registry } from './../../src/Registry';
 import { Base } from './../../src/meta/Base';
-import { BaseWithSet } from './../../src/meta/Base';
+import { BaseWithSetter } from './../../src/meta/Base';
 import { NodeEventType } from './../../src/NodeHandler';
 import { widgetInstanceMap } from './../../src/vdom';
 
@@ -38,7 +38,7 @@ class TestMeta extends Base {
 	}
 }
 
-class TestMetaWithSet extends BaseWithSet<{ foo: string }> {
+class TestMetaWithSet extends BaseWithSetter<{ foo: string }> {
 	public widgetEvent = false;
 
 	constructor(options: any) {

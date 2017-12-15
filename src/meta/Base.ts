@@ -54,15 +54,15 @@ export class Base extends Destroyable implements WidgetMetaBase {
 /**
  *
  */
-export abstract class BaseWithSet<P = any> extends Base {
-	public readonly properties: P;
+export abstract class BaseWithSetter<P = any> extends Base {
+	public readonly setterProperties: P;
 
 	/**
 	 *
 	 * @param key
 	 * @param properties
 	 */
-	abstract set(key: string | number, properties: any): void;
+	abstract set(key: string | number, setterProperties: P): void;
 }
 
 export default Base;

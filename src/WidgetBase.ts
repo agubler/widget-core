@@ -12,6 +12,7 @@ import {
 	DNode,
 	Render,
 	VNodePropertyExtras,
+	VNodeProperties,
 	WidgetMetaBase,
 	WidgetMetaConstructor,
 	WidgetBaseInterface,
@@ -21,7 +22,7 @@ import RegistryHandler from './RegistryHandler';
 import NodeHandler from './NodeHandler';
 import { widgetInstanceMap } from './vdom';
 import { isWidgetBaseConstructor, WIDGET_BASE_TYPE } from './Registry';
-import { BaseWithSet } from './meta/Base';
+import { BaseWithSetter } from './meta/Base';
 
 enum WidgetRenderState {
 	IDLE = 1,
@@ -51,12 +52,12 @@ const boundAuto = auto.bind(null);
  * @param Meta
  * @param properties
  */
-export function meta<T extends BaseWithSet>(Meta: Constructor<T>, properties: T['properties']): VNodePropertyExtras {
+export function meta<T extends BaseWithSetter>(Meta: Constructor<T>, metaProperties: T['setterProperties']): VNodePropertyExtras {
 	return {
-		beforeCallback(this: any, virtualDomProperties: VirtualDomProperties) {
-			const { key } = virtualDomProperties;
+		apply(this: any, domNode: Element, previousProperties: VNodeProperties, properties: VNodeProperties) {
+			const { key } = properties;
 			if (key) {
-				this.meta(Meta).set(key, properties);
+				this.meta(Meta).set(key, metaProperties);
 			}
 			else {
 				console.warn('Cannot apply meta for a node without a key');

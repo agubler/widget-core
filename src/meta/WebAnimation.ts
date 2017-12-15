@@ -1,5 +1,5 @@
 import 'web-animations-js/web-animations-next-lite.min';
-import { BaseWithSet } from './Base';
+import { BaseWithSetter } from './Base';
 import Map from '@dojo/shim/Map';
 import global from '@dojo/shim/global';
 
@@ -58,7 +58,7 @@ export interface AnimationPlayer {
 	used: boolean;
 }
 
-export class WebAnimations extends BaseWithSet {
+export class WebAnimations extends BaseWithSetter<AnimationProperties | AnimationProperties[]> {
 
 	private _animationMap = new Map<string, AnimationPlayer>();
 

@@ -188,9 +188,14 @@ function removeClasses(domNode: Element, classes: SupportedClassName) {
 	}
 }
 
-function callExtras(extras: VNodePropertyExtras[], properties: VNodeProperties) {
-	extras.forEach(({ beforeCallback }) => {
-		beforeCallback.call(properties.bind, properties);
+function callExtras(
+	extras: VNodePropertyExtras[],
+	domNode: Element,
+	previousProperties: VNodeProperties,
+	properties: VNodeProperties
+) {
+	extras.forEach(({ apply }) => {
+		apply.call(properties.bind, domNode, previousProperties, properties);
 	});
 }
 
@@ -224,7 +229,7 @@ function setProperties(domNode: Element, properties: VNodeProperties, projection
 			}
 		}
 		else if (propName === 'extras') {
-			callExtras(properties[propName]!, properties);
+			callExtras(properties[propName]!, domNode, {}, properties);
 		}
 		else if (propName !== 'key' && propValue !== null && propValue !== undefined) {
 			const type = typeof propValue;
@@ -346,7 +351,7 @@ function updateProperties(
 			}
 		}
 		else if (propName === 'extras') {
-			callExtras(properties[propName]!, properties);
+			callExtras(properties[propName]!, domNode, previousProperties, properties);
 		}
 		else {
 			if (!propValue && typeof previousValue === 'string') {

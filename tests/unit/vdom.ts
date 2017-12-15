@@ -9,7 +9,7 @@ import { v, w } from '../../src/d';
 import { VNode } from '../../src/interfaces';
 import { WidgetBase, meta } from '../../src/WidgetBase';
 import { Registry } from '../../src/Registry';
-import { BaseWithSet } from '../../src/meta/Base';
+import { BaseWithSetter } from '../../src/meta/Base';
 
 let consoleStub: SinonStub;
 
@@ -1615,7 +1615,7 @@ describe('vdom', () => {
 			it('extras beforeCallback is executed on initial set properties', () => {
 				let receivedProperties: any;
 				let receivedKey: any;
-				class TestMeta extends BaseWithSet<{ foo: string }> {
+				class TestMeta extends BaseWithSetter<{ foo: string }> {
 					set(key: string | number, properties: { foo: string }) {
 						receivedKey = key;
 						receivedProperties = properties;
@@ -1640,7 +1640,7 @@ describe('vdom', () => {
 			it('extras beforeCallback is executed when properties are updated', () => {
 				let receivedProperties: any;
 				let receivedKey: any;
-				class TestMeta extends BaseWithSet<{ foo: string }> {
+				class TestMeta extends BaseWithSetter<{ foo: string }> {
 					set(key: string | number, properties: { foo: string }) {
 						receivedKey = key;
 						receivedProperties = properties;
@@ -1677,7 +1677,7 @@ describe('vdom', () => {
 			it('warns if a meta is used on a node without a key', () => {
 				let receivedProperties: any;
 				let receivedKey: any;
-				class TestMeta extends BaseWithSet<{ foo: string }> {
+				class TestMeta extends BaseWithSetter<{ foo: string }> {
 					set(key: string | number, properties: { foo: string }) {
 						receivedKey = key;
 						receivedProperties = properties;
