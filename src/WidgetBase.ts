@@ -20,7 +20,7 @@ import {
 } from './interfaces';
 import RegistryHandler from './RegistryHandler';
 import NodeHandler from './NodeHandler';
-import { widgetInstanceMap } from './vdom';
+import { widgetInstanceMap, APPLICATOR } from './vdom';
 import { isWidgetBaseConstructor, WIDGET_BASE_TYPE } from './Registry';
 import { BaseWithSetter } from './meta/Base';
 
@@ -62,7 +62,8 @@ export function meta<T extends BaseWithSetter>(Meta: Constructor<T>, metaPropert
 			else {
 				console.warn('Cannot apply meta for a node without a key');
 			}
-		}
+		},
+		type: APPLICATOR
 	};
 }
 

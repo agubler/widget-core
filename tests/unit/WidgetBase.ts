@@ -370,20 +370,18 @@ describe('WidgetBase', () => {
 		});
 
 		it('meta with set can be used in v', () => {
+			const myMeta = meta(TestMetaWithSet, { foo: 'foo' });
 			class Widget extends WidgetBase {
 				render() {
 					return v('div', {
 						key: 'root',
-						extras: [
-							meta(TestMetaWithSet, { foo: 'foo' })
-						]
+						myMeta
 					});
 				}
 			}
 			const widget = new Widget();
 			const renderResult = widget.render();
-			assert.isOk(renderResult.properties.extras);
-			assert.lengthOf(renderResult.properties.extras!, 1);
+			assert.strictEqual(renderResult.properties.myMeta, myMeta);
 		});
 	});
 

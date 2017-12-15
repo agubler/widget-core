@@ -1625,9 +1625,7 @@ describe('vdom', () => {
 					render() {
 						return v('div', {
 							key: 'root',
-							extras: [
-								meta(TestMeta, { foo: 'bar' })
-							]
+							animation: meta(TestMeta, { foo: 'bar' })
 						});
 					}
 				}
@@ -1659,9 +1657,7 @@ describe('vdom', () => {
 						}
 						return v('div', {
 							key: 'root',
-							extras: [
-								meta(TestMeta, metaProps)
-							]
+							animation: meta(TestMeta, metaProps)
 						});
 					}
 				}
@@ -1685,9 +1681,7 @@ describe('vdom', () => {
 				}
 				class Widget extends WidgetBase {
 					render() {
-						return v('div', { extras: [
-							meta(TestMeta, { foo: 'foo' })
-						] });
+						return v('div', { animation: meta(TestMeta, { foo: 'foo' }) });
 					}
 				}
 				const widget = new Widget();

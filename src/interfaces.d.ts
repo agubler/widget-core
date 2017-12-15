@@ -93,56 +93,12 @@ interface VNodePropertyExtras {
 		previousProperties: VNodeProperties,
 		properties: VNodeProperties
 	): void;
+	type: Symbol;
 }
 
-export interface VNodeProperties {
-	/**
-	 * The animation to perform when this node is added to an already existing parent.
-	 * When this value is a string, you must pass a `projectionOptions.transitions` object when creating the
-	 * projector using [[createProjector]].
-	 * @param element - Element that was just added to the DOM.
-	 * @param properties - The properties object that was supplied to the [[h]] method
-	 */
-	enterAnimation?: ((element: Element, properties?: VNodeProperties) => void) | string;
-	/**
-	 * The animation to perform when this node is removed while its parent remains.
-	 * When this value is a string, you must pass a `projectionOptions.transitions` object when creating the projector using [[createProjector]].
-	 * @param element - Element that ought to be removed from the DOM.
-	 * @param removeElement - Function that removes the element from the DOM.
-	 * This argument is provided purely for convenience.
-	 * You may use this function to remove the element when the animation is done.
-	 * @param properties - The properties object that was supplied to the [[v]] method that rendered this [[VNode]] the previous time.
-	 */
-	exitAnimation?: ((element: Element, removeElement: () => void, properties?: VNodeProperties) => void) | string;
-	/**
-	 * The animation to perform when the properties of this node change.
-	 * This also includes attributes, styles, css classes. This callback is also invoked when node contains only text and that text changes.
-	 * @param element - Element that was modified in the DOM.
-	 * @param properties - The last properties object that was supplied to the [[h]] method
-	 * @param previousProperties - The previous properties object that was supplied to the [[h]] method
-	 */
-	updateAnimation?: (element: Element, properties?: VNodeProperties, previousProperties?: VNodeProperties) => void;
+export type VNodeProperties = VirtualDomEventProperties & WithApplicator<VirtualDomPropertyProperties>;
 
-	/**
-	 * Bind should not be defined.
-	 */
-	readonly bind?: void;
-	/**
-	 * Used to uniquely identify a DOM node among siblings.
-	 * A key is required when there are more children with the same selector and these children are added or removed dynamically.
-	 * NOTE: this does not have to be a string or number, a [[Component]] Object for instance is also possible.
-	 */
-	readonly key?: string | number;
-	/**
-	 * An array of supported class names to be added to classList on a DOM node
-	 */
-	readonly classes?: SupportedClassName | SupportedClassName[];
-	/**
-	 * An object literal like `{height:'100px'}` which allows styles to be changed dynamically. All values must be strings.
-	 */
-	readonly styles?: { [index: string]: string | null | undefined };
-
-	// Pointer Events
+export interface VirtualDomEventProperties {
 	onpointermove?(ev?: PointerEvent): boolean | void;
 	onpointerdown?(ev?: PointerEvent): boolean | void;
 	onpointerup?(ev?: PointerEvent): boolean | void;
@@ -151,21 +107,10 @@ export interface VNodeProperties {
 	onpointerenter?(ev?: PointerEvent): boolean | void;
 	onpointerleave?(ev?: PointerEvent): boolean | void;
 	onpointercancel?(ev?: PointerEvent): boolean | void;
-	// For Pointer Event Polyfill see: https://github.com/jquery/PEP
-	readonly 'touch-action'?: string;
-	// From Element
 	ontouchcancel?(ev?: TouchEvent): boolean | void;
 	ontouchend?(ev?: TouchEvent): boolean | void;
 	ontouchmove?(ev?: TouchEvent): boolean | void;
 	ontouchstart?(ev?: TouchEvent): boolean | void;
-	// From HTMLFormElement
-	readonly action?: string;
-	readonly encoding?: string;
-	readonly enctype?: string;
-	readonly method?: string;
-	readonly name?: string;
-	readonly target?: string;
-	// From HTMLElement
 	onblur?(ev?: FocusEvent): boolean | void;
 	onchange?(ev?: Event): boolean | void;
 	onclick?(ev?: MouseEvent): boolean | void;
@@ -186,13 +131,26 @@ export interface VNodeProperties {
 	onmousewheel?(ev?: WheelEvent | MouseWheelEvent): boolean | void;
 	onscroll?(ev?: UIEvent): boolean | void;
 	onsubmit?(ev?: Event): boolean | void;
+}
+
+export interface VirtualDomPropertyProperties {
+	readonly bind?: void;
+	readonly key?: string | number;
+	readonly classes?: SupportedClassName | SupportedClassName[];
+	readonly styles?: { [index: string]: string | null | undefined };
+	readonly action?: string;
+	readonly encoding?: string;
+	readonly enctype?: string;
+	readonly method?: string;
+	readonly name?: string;
+	readonly target?: string;
+	readonly 'touch-action'?: string;
 	readonly spellcheck?: boolean;
 	readonly tabIndex?: number;
 	readonly disabled?: boolean;
 	readonly title?: string;
 	readonly accessKey?: string;
 	readonly id?: string;
-	// From HTMLInputElement
 	readonly type?: string;
 	readonly autocomplete?: string;
 	readonly checked?: boolean;
@@ -200,21 +158,15 @@ export interface VNodeProperties {
 	readonly readOnly?: boolean;
 	readonly src?: string;
 	readonly value?: string;
-	// From HTMLImageElement
 	readonly alt?: string;
 	readonly srcset?: string;
-	/**
-	 * Puts a non-interactive string of html inside the DOM node.
-	 *
-	 * Note: if you use innerHTML, cannot protect you from XSS vulnerabilities and you must make sure that the innerHTML value is safe.
-	 */
 	readonly innerHTML?: string;
-
-	/**
-	 * Everything that is not explicitly listed (properties and attributes that are either uncommon or custom).
-	 */
 	readonly [index: string]: any;
 }
+
+type WithApplicator<T> = {
+	[P in keyof T]: T[P] | VNodePropertyExtras;
+};
 
 /**
  * Type of the `WidgetRegistry` label

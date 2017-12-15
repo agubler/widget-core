@@ -27,6 +27,8 @@ const emptyArray: (InternalWNode | InternalVNode)[] = [];
 
 export type RenderResult = DNode<any> | DNode<any>[];
 
+export const APPLICATOR = Symbol('Identifier for a generic node applicator');
+
 export interface InternalWNode extends WNode<DefaultWidgetBaseInterface> {
 
 	/**
@@ -86,6 +88,10 @@ export interface WidgetData {
 }
 
 export const widgetInstanceMap = new WeakMap<any, WidgetData>();
+
+export function isApplicator(value: any): value is VNodePropertyExtras {
+	return Boolean(value && value.type === APPLICATOR);
+}
 
 function same(dnode1: InternalDNode, dnode2: InternalDNode) {
 	if (isVNode(dnode1) && isVNode(dnode2)) {
@@ -205,7 +211,10 @@ function setProperties(domNode: Element, properties: VNodeProperties, projection
 	for (let i = 0; i < propCount; i++) {
 		const propName = propNames[i];
 		let propValue = properties[propName];
-		if (propName === 'classes') {
+		if (isApplicator(propValue)) {
+			propValue.apply.call(properties.bind, domNode, {}, properties);
+		}
+		else if (propName === 'classes') {
 			const currentClasses = Array.isArray(propValue) ? propValue : [ propValue ];
 			if (!(domNode as Element).className) {
 				(domNode as Element).className = currentClasses.join(' ').trim();
@@ -227,9 +236,6 @@ function setProperties(domNode: Element, properties: VNodeProperties, projection
 					projectionOptions.styleApplyer!(domNode as HTMLElement, styleName, styleValue);
 				}
 			}
-		}
-		else if (propName === 'extras') {
-			callExtras(properties[propName]!, domNode, {}, properties);
 		}
 		else if (propName !== 'key' && propValue !== null && propValue !== undefined) {
 			const type = typeof propValue;
@@ -280,13 +286,15 @@ function updateProperties(
 	const propNames = Object.keys(properties);
 	const propCount = propNames.length;
 	if (propNames.indexOf('classes') === -1 && previousProperties.classes) {
-		if (Array.isArray(previousProperties.classes)) {
-			for (let i = 0; i < previousProperties.classes.length; i++) {
-				removeClasses(domNode, previousProperties.classes[i]);
+		if (!isApplicator(previousProperties.classes)) {
+			if (Array.isArray(previousProperties.classes)) {
+				for (let i = 0; i < previousProperties.classes.length; i++) {
+					removeClasses(domNode, previousProperties.classes[i]);
+				}
 			}
-		}
-		else {
-			removeClasses(domNode, previousProperties.classes);
+			else {
+				removeClasses(domNode, previousProperties.classes);
+			}
 		}
 	}
 
@@ -296,6 +304,9 @@ function updateProperties(
 		const propName = propNames[i];
 		let propValue = properties[propName];
 		const previousValue = previousProperties![propName];
+		if (isApplicator(propValue)) {
+			propValue.apply.call(properties.bind, domNode, previousProperties, properties);
+		}
 		if (propName === 'classes') {
 			const previousClasses = Array.isArray(previousValue) ? previousValue : [ previousValue ];
 			const currentClasses = Array.isArray(propValue) ? propValue : [ propValue ];
