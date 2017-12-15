@@ -7,8 +7,9 @@ import sendEvent from './../support/sendEvent';
 import { dom, InternalHNode, InternalWNode, widgetInstanceMap } from '../../src/vdom';
 import { v, w } from '../../src/d';
 import { HNode } from '../../src/interfaces';
-import { WidgetBase } from '../../src/WidgetBase';
+import { WidgetBase, meta } from '../../src/WidgetBase';
 import { Registry } from '../../src/Registry';
+import { BaseWithSet } from '../../src/meta/Base';
 
 let consoleStub: SinonStub;
 
@@ -1605,6 +1606,96 @@ describe('vdom', () => {
 				assert.strictEqual((projection.domNode.childNodes[0] as Element).outerHTML, '<div style="min-height: 20px;"></div>');
 				projection.update(v('div', { styles: { height: '30px' } }));
 				assert.strictEqual((projection.domNode.childNodes[0] as Element).outerHTML, '<div style="min-height: 30px;"></div>');
+			});
+
+		});
+
+		describe('extras', () => {
+
+			it('extras beforeCallback is executed on initial set properties', () => {
+				let receivedProperties: any;
+				let receivedKey: any;
+				class TestMeta extends BaseWithSet<{ foo: string }> {
+					set(key: string | number, properties: { foo: string }) {
+						receivedKey = key;
+						receivedProperties = properties;
+					}
+				}
+				class Widget extends WidgetBase {
+					render() {
+						return v('div', {
+							key: 'root',
+							extras: [
+								meta(TestMeta, { foo: 'bar' })
+							]
+						});
+					}
+				}
+				const widget = new Widget();
+				dom.create(widget.__render__(), widget);
+				assert.deepEqual(receivedProperties, { foo: 'bar' });
+				assert.strictEqual(receivedKey, 'root');
+			});
+
+			it('extras beforeCallback is executed when properties are updated', () => {
+				let receivedProperties: any;
+				let receivedKey: any;
+				class TestMeta extends BaseWithSet<{ foo: string }> {
+					set(key: string | number, properties: { foo: string }) {
+						receivedKey = key;
+						receivedProperties = properties;
+					}
+				}
+				class Widget extends WidgetBase {
+					private _first = true;
+					render() {
+						let metaProps: { foo: string };
+						if (this._first) {
+							metaProps = { foo: 'bar' };
+							this._first = false;
+						}
+						else {
+							metaProps = { foo: 'baz' };
+						}
+						return v('div', {
+							key: 'root',
+							extras: [
+								meta(TestMeta, metaProps)
+							]
+						});
+					}
+				}
+				const widget = new Widget();
+				const projection = dom.create(widget.__render__(), widget);
+				assert.deepEqual(receivedProperties, { foo: 'bar' });
+				assert.strictEqual(receivedKey, 'root');
+				projection.update(widget.__render__());
+				assert.deepEqual(receivedProperties, { foo: 'baz' });
+				assert.strictEqual(receivedKey, 'root');
+			});
+
+			it('warns if a meta is used on a node without a key', () => {
+				let receivedProperties: any;
+				let receivedKey: any;
+				class TestMeta extends BaseWithSet<{ foo: string }> {
+					set(key: string | number, properties: { foo: string }) {
+						receivedKey = key;
+						receivedProperties = properties;
+					}
+				}
+				class Widget extends WidgetBase {
+					render() {
+						return v('div', { extras: [
+							meta(TestMeta, { foo: 'foo' })
+						] });
+					}
+				}
+				const widget = new Widget();
+				dom.create(widget.__render__(), widget);
+				assert.isUndefined(receivedProperties);
+				assert.isUndefined(receivedKey);
+				assert.isTrue(consoleStub.calledOnce);
+				assert.isTrue(consoleStub.calledWith('Cannot apply meta for a node without a key'));
 			});
 
 		});

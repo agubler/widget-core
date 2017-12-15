@@ -9,7 +9,8 @@ import {
 	Projection,
 	SupportedClassName,
 	TransitionStrategy,
-	VirtualDomProperties
+	VirtualDomProperties,
+	VNodePropertyExtras
 } from './interfaces';
 import { from as arrayFrom } from '@dojo/shim/array';
 import { isWNode, isHNode, HNODE } from './d';
@@ -187,6 +188,12 @@ function removeClasses(domNode: Element, classes: SupportedClassName) {
 	}
 }
 
+function callExtras(extras: VNodePropertyExtras[], properties: VirtualDomProperties) {
+	extras.forEach(({ beforeCallback }) => {
+		beforeCallback.call(properties.bind, properties);
+	});
+}
+
 function setProperties(domNode: Element, properties: VirtualDomProperties, projectionOptions: ProjectionOptions) {
 	const propNames = Object.keys(properties);
 	const propCount = propNames.length;
@@ -215,6 +222,9 @@ function setProperties(domNode: Element, properties: VirtualDomProperties, proje
 					projectionOptions.styleApplyer!(domNode as HTMLElement, styleName, styleValue);
 				}
 			}
+		}
+		else if (propName === 'extras') {
+			callExtras(properties[propName]!, properties);
 		}
 		else if (propName !== 'key' && propValue !== null && propValue !== undefined) {
 			const type = typeof propValue;
@@ -334,6 +344,9 @@ function updateProperties(
 					projectionOptions.styleApplyer!(domNode as HTMLElement, styleName, '');
 				}
 			}
+		}
+		else if (propName === 'extras') {
+			callExtras(properties[propName]!, properties);
 		}
 		else {
 			if (!propValue && typeof previousValue === 'string') {

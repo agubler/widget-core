@@ -2,7 +2,7 @@ const { describe, it, beforeEach, afterEach } = intern.getInterface('bdd');
 const { assert } = intern.getPlugin('chai');
 import { spy, stub, SinonStub } from 'sinon';
 
-import { WidgetBase } from './../../src/WidgetBase';
+import { WidgetBase, meta } from './../../src/WidgetBase';
 import { v } from './../../src/d';
 import { WIDGET_BASE_TYPE } from './../../src/Registry';
 import { HNode, WidgetMetaConstructor, WidgetMetaBase } from './../../src/interfaces';
@@ -10,6 +10,7 @@ import { handleDecorator } from './../../src/decorators/handleDecorator';
 import { diffProperty } from './../../src/decorators/diffProperty';
 import { Registry } from './../../src/Registry';
 import { Base } from './../../src/meta/Base';
+import { BaseWithSet } from './../../src/meta/Base';
 import { NodeEventType } from './../../src/NodeHandler';
 import { widgetInstanceMap } from './../../src/vdom';
 
@@ -33,6 +34,21 @@ class TestMeta extends Base {
 	}
 
 	get(key: string | number) {
+		return this.getNode(key);
+	}
+}
+
+class TestMetaWithSet extends BaseWithSet<{ foo: string }> {
+	public widgetEvent = false;
+
+	constructor(options: any) {
+		super(options);
+		this.nodeHandler.on(NodeEventType.Widget, () => {
+			this.widgetEvent = true;
+		});
+	}
+
+	set(key: string | number) {
 		return this.getNode(key);
 	}
 }
@@ -293,8 +309,8 @@ describe('WidgetBase', () => {
 	describe('meta', () => {
 		it('meta providers are cached', () => {
 			const widget = new BaseTestWidget();
-			const meta = widget.meta(Base);
-			assert.strictEqual(meta, widget.meta(Base));
+			const meta = widget.meta(TestMeta);
+			assert.strictEqual(meta, widget.meta(TestMeta));
 		});
 
 		it('elements are added to node handler on create', () => {
@@ -351,6 +367,23 @@ describe('WidgetBase', () => {
 			const instanceData = widgetInstanceMap.get(widget)!;
 			instanceData.onDetach();
 			assert.isTrue(metaDestroyed);
+		});
+
+		it('meta with set can be used in v', () => {
+			class Widget extends WidgetBase {
+				render() {
+					return v('div', {
+						key: 'root',
+						extras: [
+							meta(TestMetaWithSet, { foo: 'foo' })
+						]
+					});
+				}
+			}
+			const widget = new Widget();
+			const renderResult = widget.render();
+			assert.isOk(renderResult.properties.extras);
+			assert.lengthOf(renderResult.properties.extras!, 1);
 		});
 	});
 

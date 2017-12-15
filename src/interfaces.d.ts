@@ -137,6 +137,10 @@ export interface AnimationInfo {
 	startTime: number;
 }
 
+interface VNodePropertyExtras {
+	beforeCallback(properties: VirtualDomProperties): void;
+}
+
 export interface VirtualDomProperties {
 	/**
 	 * The animation to perform when this node is added to an already existing parent.
@@ -164,6 +168,11 @@ export interface VirtualDomProperties {
 	 * @param previousProperties - The previous properties object that was supplied to the [[h]] method
 	 */
 	updateAnimation?: (element: Element, properties?: VirtualDomProperties, previousProperties?: VirtualDomProperties) => void;
+
+	/**
+	 *
+	 */
+	extras?: VNodePropertyExtras[];
 	/**
 	 * Bind should not be defined.
 	 */
