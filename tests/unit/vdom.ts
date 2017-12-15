@@ -1610,9 +1610,9 @@ describe('vdom', () => {
 
 		});
 
-		describe('extras', () => {
+		describe('Applicators', () => {
 
-			it('extras beforeCallback is executed on initial set properties', () => {
+			it('applicator is executed on initial set properties', () => {
 				let receivedProperties: any;
 				let receivedKey: any;
 				class TestMeta extends BaseWithSetter<{ foo: string }> {
@@ -1635,7 +1635,7 @@ describe('vdom', () => {
 				assert.strictEqual(receivedKey, 'root');
 			});
 
-			it('extras beforeCallback is executed when properties are updated', () => {
+			it('applicator is executed when properties are updated', () => {
 				let receivedProperties: any;
 				let receivedKey: any;
 				class TestMeta extends BaseWithSetter<{ foo: string }> {
@@ -1668,28 +1668,6 @@ describe('vdom', () => {
 				projection.update(widget.__render__());
 				assert.deepEqual(receivedProperties, { foo: 'baz' });
 				assert.strictEqual(receivedKey, 'root');
-			});
-
-			it('warns if a meta is used on a node without a key', () => {
-				let receivedProperties: any;
-				let receivedKey: any;
-				class TestMeta extends BaseWithSetter<{ foo: string }> {
-					set(key: string | number, properties: { foo: string }) {
-						receivedKey = key;
-						receivedProperties = properties;
-					}
-				}
-				class Widget extends WidgetBase {
-					render() {
-						return v('div', { animation: meta(TestMeta, { foo: 'foo' }) });
-					}
-				}
-				const widget = new Widget();
-				dom.create(widget.__render__(), widget);
-				assert.isUndefined(receivedProperties);
-				assert.isUndefined(receivedKey);
-				assert.isTrue(consoleStub.calledOnce);
-				assert.isTrue(consoleStub.calledWith('Cannot apply meta for a node without a key'));
 			});
 
 		});

@@ -383,6 +383,24 @@ describe('WidgetBase', () => {
 			const renderResult = widget.render();
 			assert.strictEqual(renderResult.properties.myMeta, myMeta);
 		});
+
+		it('warns if a meta is used on a node without a key', () => {
+			const myMeta = meta(TestMetaWithSet, { foo: 'foo' });
+			class Widget extends WidgetBase {
+				render() {
+					return v('div', {
+						myMeta
+					});
+				}
+			}
+			const widget = new Widget();
+			const renderResult = widget.render();
+			assert.strictEqual(renderResult.properties.myMeta, myMeta);
+			myMeta.apply.call(widget, {}, {}, {});
+			assert.isTrue(consoleStub.calledOnce);
+			assert.isTrue(consoleStub.calledWith('Cannot apply meta for a node without a key'));
+
+		});
 	});
 
 	describe('decorators', () => {
