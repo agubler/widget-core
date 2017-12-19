@@ -486,41 +486,6 @@ function callOnDetach(dNodes: InternalDNode | InternalDNode[], parentInstance: D
 	}
 }
 
-function nodeToRemove(dnode: InternalDNode, transitions: TransitionStrategy, projectionOptions: ProjectionOptions) {
-	if (isWNode(dnode)) {
-		const rendered = dnode.rendered || emptyArray;
-		for (let i = 0; i < rendered.length; i++) {
-			const child = rendered[i];
-			if (isVNode(child)) {
-				child.domNode!.parentNode!.removeChild(child.domNode!);
-			}
-			else {
-				nodeToRemove(child, transitions, projectionOptions);
-			}
-		}
-	}
-	else {
-		const domNode = dnode.domNode;
-		const properties = dnode.properties;
-		const exitAnimation = properties.exitAnimation;
-		if (properties && exitAnimation) {
-			(domNode as HTMLElement).style.pointerEvents = 'none';
-			const removeDomNode = function() {
-				domNode && domNode.parentNode && domNode.parentNode.removeChild(domNode);
-			};
-			if (typeof exitAnimation === 'function') {
-				exitAnimation(domNode as Element, removeDomNode, properties);
-				return;
-			}
-			else {
-				transitions.exit(dnode.domNode as Element, properties, exitAnimation as string, removeDomNode);
-				return;
-			}
-		}
-		domNode && domNode.parentNode && domNode.parentNode.removeChild(domNode);
-	}
-}
-
 function checkDistinguishable(
 	childNodes: InternalDNode[],
 	indexToCheck: number,
@@ -582,15 +547,18 @@ function updateChildren(
 		else {
 			const findOldIndex = findIndexOfChild(oldChildren, newChild, oldIndex + 1);
 			if (findOldIndex >= 0) {
-				for (i = oldIndex; i < findOldIndex; i++) {
-					const oldChild = oldChildren[i];
-					const indexToCheck = i;
-					projectionOptions.afterRenderCallbacks.push(() => {
+				projectionOptions.afterRenderCallbacks.push(() => {
+					for (i = oldIndex; i < findOldIndex; i++) {
+						const oldChild = oldChildren[i];
+						const indexToCheck = i;
 						callOnDetach(oldChild, parentInstance);
 						checkDistinguishable(oldChildren, indexToCheck, parentInstance);
-					});
-					nodeToRemove(oldChildren[i], transitions, projectionOptions);
-				}
+					}
+				});
+				const range = document.createRange();
+				range.setStartBefore(getDNodeElement(oldChildren[oldIndex]));
+				range.setEndAfter(getDNodeElement(oldChildren[findOldIndex - 1]));
+				range.deleteContents();
 				textUpdated = updateDom(oldChildren[findOldIndex], newChild, projectionOptions, parentVNode, parentInstance) || textUpdated;
 				oldIndex = findOldIndex + 1;
 			}
@@ -629,18 +597,29 @@ function updateChildren(
 		newIndex++;
 	}
 	if (oldChildrenLength > oldIndex) {
-		// Remove child fragments
-		for (i = oldIndex; i < oldChildrenLength; i++) {
-			const oldChild = oldChildren[i];
-			const indexToCheck = i;
-			projectionOptions.afterRenderCallbacks.push(() => {
+		projectionOptions.afterRenderCallbacks.push(() => {
+			for (i = oldIndex; i < oldChildrenLength; i++) {
+				const oldChild = oldChildren[i];
+				const indexToCheck = i;
 				callOnDetach(oldChild, parentInstance);
 				checkDistinguishable(oldChildren, indexToCheck, parentInstance);
-			});
-			nodeToRemove(oldChildren[i], transitions, projectionOptions);
-		}
+			}
+		});
+		const range = document.createRange();
+		range.setStartBefore(getDNodeElement(oldChildren[0]));
+		range.setEndAfter(getDNodeElement(oldChildren[oldChildrenLength - 1]));
+		range.deleteContents();
 	}
 	return textUpdated;
+}
+
+function getDNodeElement(dNode: InternalWNode | InternalVNode): Element | Text {
+	if (isWNode(dNode)) {
+		return getDNodeElement(dNode.rendered[0]);
+	}
+	else {
+		return dNode.domNode as Element | Text;
+	}
 }
 
 function addChildren(
