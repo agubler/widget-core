@@ -87,6 +87,9 @@ export type SupportedClassName = string | null | undefined;
 
 export type DeferredVirtualProperties = (inserted: boolean) => VNodeProperties;
 
+/**
+ * Interface for VNodePropertyExtras that enables adding custom generic applicators for property diffing and application
+ */
 export interface VNodePropertyExtras {
 	apply(
 		domNode: Element,
@@ -96,8 +99,14 @@ export interface VNodePropertyExtras {
 	type: Symbol;
 }
 
+/**
+ * VNode properties
+ */
 export type VNodeProperties = VNodeAnimationProperties & VNodeEventProperties & WithApplicator<VNodePropertyProperties>;
 
+/**
+ * Event properties for VNodes
+ */
 export interface VNodeEventProperties {
 	onpointermove?(ev?: PointerEvent): boolean | void;
 	onpointerdown?(ev?: PointerEvent): boolean | void;
@@ -133,6 +142,9 @@ export interface VNodeEventProperties {
 	onsubmit?(ev?: Event): boolean | void;
 }
 
+/**
+ * Supported properties for VNodes
+ */
 export interface VNodePropertyProperties {
 	readonly bind?: void;
 	readonly key?: string | number;
@@ -164,6 +176,9 @@ export interface VNodePropertyProperties {
 	readonly [index: string]: any;
 }
 
+/**
+ * Web Animation properties for VNodes
+ */
 export interface VNodeAnimationProperties {
 	/**
 	 * The animation to perform when this node is added to an already existing parent.
@@ -193,6 +208,9 @@ export interface VNodeAnimationProperties {
 	updateAnimation?: (element: Element, properties?: VNodeProperties, previousProperties?: VNodeProperties) => void;
 }
 
+/**
+ * Adds `VnodePropertyExtras` as an accepted type for the interface/type passed
+ */
 export type WithApplicator<T> = {
 	[P in keyof T]: T[P] | VNodePropertyExtras;
 };

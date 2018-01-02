@@ -52,15 +52,16 @@ export class Base extends Destroyable implements WidgetMetaBase {
 }
 
 /**
- *
+ * Base meta for setting against the a dom node.
  */
 export abstract class BaseWithSetter<P = any> extends Base {
 	public readonly setterProperties: P;
 
 	/**
+	 * Applies properties to a node with the specified key
 	 *
-	 * @param key
-	 * @param properties
+	 * @param key The key for the node
+	 * @param properties The properties to apply to the node
 	 */
 	abstract set(key: string | number, setterProperties: P): void;
 }

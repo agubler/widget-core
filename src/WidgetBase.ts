@@ -48,9 +48,10 @@ const decoratorMap = new Map<Function, Map<string, any[]>>();
 const boundAuto = auto.bind(null);
 
 /**
+ * Applicator for `meta` implementation that can set properties on targetted nodes.
  *
- * @param Meta
- * @param properties
+ * @param Meta The meta constructor to set
+ * @param properties The properties to set on the node
  */
 export function meta<T extends BaseWithSetter>(Meta: Constructor<T>, metaProperties: T['setterProperties']): VNodePropertyExtras {
 	return {
