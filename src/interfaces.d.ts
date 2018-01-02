@@ -87,7 +87,7 @@ export type SupportedClassName = string | null | undefined;
 
 export type DeferredVirtualProperties = (inserted: boolean) => VNodeProperties;
 
-interface VNodePropertyExtras {
+export interface VNodePropertyExtras {
 	apply(
 		domNode: Element,
 		previousProperties: VNodeProperties,
@@ -96,9 +96,9 @@ interface VNodePropertyExtras {
 	type: Symbol;
 }
 
-export type VNodeProperties = VirtualDomEventProperties & WithApplicator<VirtualDomPropertyProperties>;
+export type VNodeProperties = VNodeAnimationProperties & VNodeEventProperties & WithApplicator<VNodePropertyProperties>;
 
-export interface VirtualDomEventProperties {
+export interface VNodeEventProperties {
 	onpointermove?(ev?: PointerEvent): boolean | void;
 	onpointerdown?(ev?: PointerEvent): boolean | void;
 	onpointerup?(ev?: PointerEvent): boolean | void;
@@ -133,7 +133,7 @@ export interface VirtualDomEventProperties {
 	onsubmit?(ev?: Event): boolean | void;
 }
 
-export interface VirtualDomPropertyProperties {
+export interface VNodePropertyProperties {
 	readonly bind?: void;
 	readonly key?: string | number;
 	readonly classes?: SupportedClassName | SupportedClassName[];
@@ -164,7 +164,36 @@ export interface VirtualDomPropertyProperties {
 	readonly [index: string]: any;
 }
 
-type WithApplicator<T> = {
+export interface VNodeAnimationProperties {
+	/**
+	 * The animation to perform when this node is added to an already existing parent.
+	 * When this value is a string, you must pass a `projectionOptions.transitions` object when creating the
+	 * projector using [[createProjector]].
+	 * @param element - Element that was just added to the DOM.
+	 * @param properties - The properties object that was supplied to the [[h]] method
+	 */
+	enterAnimation?: ((element: Element, properties?: VNodeProperties) => void) | string;
+	/**
+	 * The animation to perform when this node is removed while its parent remains.
+	 * When this value is a string, you must pass a `projectionOptions.transitions` object when creating the projector using [[createProjector]].
+	 * @param element - Element that ought to be removed from the DOM.
+	 * @param removeElement - Function that removes the element from the DOM.
+	 * This argument is provided purely for convenience.
+	 * You may use this function to remove the element when the animation is done.
+	 * @param properties - The properties object that was supplied to the [[v]] method that rendered this [[VNode]] the previous time.
+	 */
+	exitAnimation?: ((element: Element, removeElement: () => void, properties?: VNodeProperties) => void) | string;
+	/**
+	 * The animation to perform when the properties of this node change.
+	 * This also includes attributes, styles, css classes. This callback is also invoked when node contains only text and that text changes.
+	 * @param element - Element that was modified in the DOM.
+	 * @param properties - The last properties object that was supplied to the [[h]] method
+	 * @param previousProperties - The previous properties object that was supplied to the [[h]] method
+	 */
+	updateAnimation?: (element: Element, properties?: VNodeProperties, previousProperties?: VNodeProperties) => void;
+}
+
+export type WithApplicator<T> = {
 	[P in keyof T]: T[P] | VNodePropertyExtras;
 };
 
