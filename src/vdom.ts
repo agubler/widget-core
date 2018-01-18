@@ -199,6 +199,16 @@ function setProperties(domNode: Element, properties: VNodeProperties, projection
 					addClasses(domNode as Element, currentClasses[i]);
 				}
 			}
+		} else if (propName === 'focus') {
+			let result = propValue;
+			if (typeof propValue === 'function') {
+				result = propValue();
+			}
+			if (result === true) {
+				projectionOptions.deferredRenderCallbacks.push(() => {
+					(domNode as HTMLElement).focus();
+				});
+			}
 		} else if (propName === 'styles') {
 			const styleNames = Object.keys(propValue);
 			const styleCount = styleNames.length;
@@ -300,6 +310,18 @@ function updateProperties(
 				for (let i = 0; i < currentClasses.length; i++) {
 					addClasses(domNode, currentClasses[i]);
 				}
+			}
+		} else if (propName === 'focus') {
+			let result = propValue;
+			if (typeof propValue === 'function') {
+				result = propValue();
+			} else {
+				result = propValue === true && propValue !== previousValue;
+			}
+			if (result === true) {
+				projectionOptions.deferredRenderCallbacks.push(() => {
+					(domNode as HTMLElement).focus();
+				});
 			}
 		} else if (propName === 'styles') {
 			const styleNames = Object.keys(propValue);
