@@ -127,7 +127,7 @@ export class Renderer {
 	private _dnodeToParentWrapperMap = new WeakMap<any, DNodeWrapper>();
 	private _instanceToWrapperMap = new WeakMap<WidgetBaseInterface, WNodeWrapper>();
 	private _renderScheduled = false;
-	private _instructionQueue: Instruction[] = [];
+	private _applicationQueue: Function[] = [];
 
 	constructor(renderer: () => WNode) {
 		this._renderer = renderer;
@@ -152,7 +152,7 @@ export class Renderer {
 		const invalidationQueue = [...this._invalidationQueue];
 		this._invalidationQueue = [];
 		while (invalidationQueue.length) {
-			const item = invalidationQueue.shift()!;
+			const item = invalidationQueue.pop()!;
 			this._updateWidget(item.current, item.next);
 			this._runRenderQueue();
 		}
@@ -160,21 +160,22 @@ export class Renderer {
 
 	private _runRenderQueue() {
 		while (this._renderQueue.length) {
-			const { current, next } = this._renderQueue.shift()!;
+			const { current, next } = this._renderQueue.pop()!;
 			this._process(current, next);
 		}
-		while (this._instructionQueue.length) {
-			const instruction = this._instructionQueue.shift()!;
-			this._processOne(instruction);
+		this._applicationQueue.reverse();
+		while (this._applicationQueue.length) {
+			const apply = this._applicationQueue.pop()!;
+			apply();
 		}
 	}
 
 	private _queueInRender(current: DNodeWrapper[], next: DNodeWrapper[]) {
-		this._renderQueue.unshift({ current, next });
+		this._renderQueue.push({ current, next });
 	}
 
-	private _queueInstruction(instruction: Instruction) {
-		this._instructionQueue.unshift(instruction);
+	private _queueApplication(apply: Function) {
+		this._applicationQueue.push(apply);
 	}
 
 	private _queue(instance: WidgetBaseInterface) {
@@ -202,7 +203,7 @@ export class Renderer {
 		});
 
 		for (let i = 0; i < instructions.length; i++) {
-			this._queueInstruction(instructions[i]);
+			this._processOne(instructions[i]);
 		}
 	}
 
@@ -309,8 +310,10 @@ export class Renderer {
 
 		// we don't want to append until the children have been appended. This was done before by it being recursive and
 		// therefore waited until the children had been completed.
-		this._setProperties(domNode as HTMLElement, {}, next.node.properties);
-		parentDomNode.appendChild(domNode);
+		this._queueApplication(() => {
+			this._setProperties(domNode as HTMLElement, {}, next.node.properties);
+			parentDomNode.appendChild(domNode);
+		});
 	}
 
 	private _updateDom(current: VNodeWrapper, next: VNodeWrapper) {
