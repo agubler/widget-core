@@ -19,7 +19,7 @@ import {
 } from './interfaces';
 import RegistryHandler from './RegistryHandler';
 import NodeHandler from './NodeHandler';
-import { widgetInstanceMap } from './vdom';
+import { widgetInstanceMap } from './vdom3';
 import { isWidgetBaseConstructor, WIDGET_BASE_TYPE } from './Registry';
 
 interface ReactionFunctionConfig {
@@ -271,11 +271,18 @@ export class WidgetBase<P = WidgetProperties, C extends DNode = DNode> implement
 		return dNode;
 	}
 
+	private _invalidate: any;
+
+	public __setInvalidate__(invalidate: any) {
+		this._invalidate = invalidate;
+	}
+
 	public invalidate(): void {
-		const instanceData = widgetInstanceMap.get(this)!;
-		if (instanceData.invalidate) {
-			instanceData.invalidate();
-		}
+		// const instanceData = widgetInstanceMap.get(this)!;
+		this._invalidate();
+		// if (instanceData.invalidate) {
+		// 	instanceData.invalidate();
+		// }
 	}
 
 	protected render(): DNode | DNode[] {

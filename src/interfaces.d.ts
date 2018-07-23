@@ -444,6 +444,8 @@ export interface WidgetBaseInterface<P = WidgetProperties, C extends DNode = DNo
 	 */
 	__setChildren__(children: (C | null)[]): void;
 
+	__setInvalidate__(invalidator: () => void): void;
+
 	/**
 	 * Main internal function for dealing with widget rendering
 	 */
