@@ -7,12 +7,14 @@ interface WNodeWrapper {
 	node: WNode;
 	instance?: WidgetBaseInterface;
 	rendered?: DNodeWrapper[];
+	nextWrapper?: DNodeWrapper;
 }
 
 interface VNodeWrapper {
 	node: VNode;
 	domNode?: HTMLElement | Text;
 	childrenWrappers?: DNodeWrapper[];
+	nextWrapper?: DNodeWrapper;
 }
 
 type DNodeWrapper = VNodeWrapper | WNodeWrapper;
@@ -103,22 +105,6 @@ function removeClasses(domNode: Element, classes: SupportedClassName) {
 	}
 }
 
-function renderedToWrapper(rendered: DNode[], parent: DNodeWrapper, parentMap: any): DNodeWrapper[] {
-	const wrappedRendered: DNodeWrapper[] = [];
-	for (let i = 0; i < rendered.length; i++) {
-		let renderedItem = rendered[i];
-		if (renderedItem == null) {
-			continue;
-		}
-		if (typeof renderedItem === 'string') {
-			renderedItem = toTextVNode(renderedItem);
-		}
-		parentMap.set(renderedItem, parent);
-		wrappedRendered.push({ node: renderedItem as any });
-	}
-	return wrappedRendered;
-}
-
 export class Renderer {
 	private _renderer: () => WNode;
 	private _rootNode: HTMLElement = document.body;
@@ -126,8 +112,10 @@ export class Renderer {
 	private _renderQueue: RenderQueueItem[] = [];
 	private _dnodeToParentWrapperMap = new WeakMap<any, DNodeWrapper>();
 	private _instanceToWrapperMap = new WeakMap<WidgetBaseInterface, WNodeWrapper>();
+	private _wrapperSiblingMap = new WeakMap<DNodeWrapper, DNodeWrapper>();
+	private _wnodeWrapperToDomNodeMap = new WeakMap<WNodeWrapper, Node>();
 	private _renderScheduled = false;
-	private _applicationQueue: Function[] = [];
+	private _applicationQueue: { apply: Function; node: any }[] = [];
 
 	constructor(renderer: () => WNode) {
 		this._renderer = renderer;
@@ -164,9 +152,27 @@ export class Renderer {
 			this._process(current, next);
 		}
 		this._applicationQueue.reverse();
+		let temp: any[] = [];
+		let previousParentDom: any = undefined;
+		let q: any[] = [];
 		while (this._applicationQueue.length) {
-			const apply = this._applicationQueue.pop()!;
-			apply();
+			const item = this._applicationQueue.pop()!;
+			const parentDomNode = this._getParentDomNode(item.node);
+			if (!previousParentDom || previousParentDom === parentDomNode) {
+				temp.push(item.apply);
+			} else {
+				q.push(temp.reverse());
+				temp = [item.apply];
+			}
+			previousParentDom = parentDomNode;
+		}
+		q.push(temp.reverse());
+		while (q.length) {
+			const a = q.pop()!;
+			while (a.length) {
+				const b = a.pop()!;
+				b();
+			}
 		}
 	}
 
@@ -174,8 +180,8 @@ export class Renderer {
 		this._renderQueue.push({ current, next });
 	}
 
-	private _queueApplication(apply: Function) {
-		this._applicationQueue.push(apply);
+	private _queueApplication(a: { apply: Function; node: any }) {
+		this._applicationQueue.push(a);
 	}
 
 	private _queue(instance: WidgetBaseInterface) {
@@ -192,15 +198,51 @@ export class Renderer {
 		this._invalidationQueue.push({ current, next });
 	}
 
-	private _process(current: DNodeWrapper[], next: DNodeWrapper[]) {
-		const instructions: Instruction[] = next.map((nextWrapper) => {
-			const index = findIndexOfChild(current, nextWrapper.node, 0);
-			if (index !== -1) {
-				const [currentNode] = current.splice(index, 1);
-				return { current: currentNode, next: nextWrapper };
+	private _renderedToWrapper(rendered: DNode[], parent: DNodeWrapper): DNodeWrapper[] {
+		const wrappedRendered: DNodeWrapper[] = [];
+		let previousItem: DNodeWrapper | undefined;
+		for (let i = 0; i < rendered.length; i++) {
+			let renderedItem = rendered[i];
+			if (renderedItem == null) {
+				continue;
 			}
-			return { current: undefined, next: nextWrapper };
-		});
+			if (typeof renderedItem === 'string') {
+				renderedItem = toTextVNode(renderedItem);
+			}
+			this._dnodeToParentWrapperMap.set(renderedItem, parent);
+			const wrapper = { node: renderedItem as any };
+			if (previousItem) {
+				this._wrapperSiblingMap.set(previousItem, wrapper);
+			}
+			wrappedRendered.push(wrapper);
+			previousItem = wrapper;
+		}
+		return wrappedRendered;
+	}
+
+	private _process(current: DNodeWrapper[], next: DNodeWrapper[]) {
+		const instructions: Instruction[] = [];
+		const foundIndexes: number[] = [];
+		for (let i = 0; i < next.length; i++) {
+			const nextWrapper = next[i];
+			const oldIndex = findIndexOfChild(current, nextWrapper.node, i);
+			if (oldIndex === -1) {
+				instructions.push({ current: undefined, next: nextWrapper });
+			} else if (oldIndex === i) {
+				foundIndexes.push(oldIndex);
+				instructions.push({ current: current[oldIndex], next: nextWrapper });
+			} else {
+				foundIndexes.push(oldIndex);
+				instructions.push({ current: current[oldIndex], next: undefined });
+				instructions.push({ current: undefined, next: nextWrapper });
+			}
+		}
+
+		for (let i = 0; i < current.length; i++) {
+			if (foundIndexes.indexOf(i) === -1) {
+				instructions.push({ current: current[i], next: undefined });
+			}
+		}
 
 		for (let i = 0; i < instructions.length; i++) {
 			this._processOne(instructions[i]);
@@ -221,7 +263,28 @@ export class Renderer {
 			} else if (isWNodeWrapper(current) && isWNodeWrapper(next)) {
 				this._updateWidget(current, next);
 			}
+		} else if (current && !next) {
+			if (isVNodeWrapper(current)) {
+				this._removeDom(current);
+			} else if (isWNodeWrapper(current)) {
+				this._removeWidget(current);
+			}
 		}
+	}
+
+	private _getParentWNodeWrapper(currentNode: VNode | WNode) {
+		let parentWNodeWrapper: WNodeWrapper | undefined;
+		while (!parentWNodeWrapper) {
+			const parentWrapper: DNodeWrapper = this._dnodeToParentWrapperMap.get(currentNode)!;
+			if (!parentWrapper) {
+				break;
+			}
+			if (isWNodeWrapper(parentWrapper)) {
+				parentWNodeWrapper = parentWrapper;
+			}
+			currentNode = parentWrapper.node;
+		}
+		return parentWNodeWrapper;
 	}
 
 	private _getParentDomNode(currentNode: VNode | WNode) {
@@ -248,8 +311,8 @@ export class Renderer {
 		const instance = new next.node.widgetConstructor();
 		const instanceData = widgetInstanceMap.get(instance)!;
 		instance.__setInvalidate__(() => {
+			instanceData.dirty = true;
 			if (!instanceData.rendering) {
-				instanceData.dirty = true;
 				this._queue(instance);
 				this._schedule();
 			}
@@ -264,18 +327,22 @@ export class Renderer {
 		this._instanceToWrapperMap.set(instance, next);
 
 		if (rendered) {
-			next.rendered = renderedToWrapper(rendered, next, this._dnodeToParentWrapperMap);
+			next.rendered = this._renderedToWrapper(rendered, next);
 			this._queueInRender([], next.rendered);
 		}
 	}
 
 	private _updateWidget(current: WNodeWrapper, next: WNodeWrapper) {
 		next.instance = current.instance;
-		this._instanceToWrapperMap.set(current.instance!, next);
 		const instanceData = widgetInstanceMap.get(next.instance)!;
+		current = this._instanceToWrapperMap.get(next.instance!)!;
 		instanceData.rendering = true;
 		next.instance!.__setProperties__(next.node.properties);
 		next.instance!.__setChildren__(next.node.children);
+		const domNode = this._wnodeWrapperToDomNodeMap.get(current);
+		if (domNode) {
+			this._wnodeWrapperToDomNodeMap.set(next, domNode);
+		}
 
 		if (instanceData.dirty) {
 			let rendered = next.instance!.__render__();
@@ -284,12 +351,47 @@ export class Renderer {
 			this._instanceToWrapperMap.set(next.instance!, next);
 
 			if (rendered) {
-				next.rendered = renderedToWrapper(rendered, next, this._dnodeToParentWrapperMap);
+				next.rendered = this._renderedToWrapper(rendered, next);
 				this._queueInRender(current.rendered || [], next.rendered);
+			} else {
+				next.rendered = current.rendered;
 			}
 		} else {
+			next.rendered = current.rendered;
 			instanceData.rendering = false;
 		}
+	}
+
+	private _removeWidget(current: WNodeWrapper) {
+		this._queueInRender(current.rendered || [], []);
+	}
+
+	private _findInsertBefore(next: DNodeWrapper) {
+		let insertBefore: any = null;
+		while (!insertBefore) {
+			const nextSibling = this._wrapperSiblingMap.get(next);
+			if (nextSibling) {
+				if (isVNodeWrapper(nextSibling)) {
+					if (nextSibling.domNode && nextSibling.domNode.parentNode) {
+						insertBefore = nextSibling.domNode;
+					} else {
+						break;
+					}
+				} else if (isWNodeWrapper(nextSibling)) {
+					const domNode = this._wnodeWrapperToDomNodeMap.get(nextSibling);
+					if (domNode && domNode.parentNode) {
+						insertBefore = domNode;
+					}
+					break;
+				}
+			} else {
+				next = this._dnodeToParentWrapperMap.get(next.node)!;
+				if (!next || isVNodeWrapper(next)) {
+					break;
+				}
+			}
+		}
+		return insertBefore;
 	}
 
 	private _createDom(next: VNodeWrapper) {
@@ -301,18 +403,25 @@ export class Renderer {
 			domNode = document.createTextNode(next.node.text);
 		}
 		next.domNode = domNode;
+		const parentWNodeWrapper = this._getParentWNodeWrapper(next.node);
+		if (parentWNodeWrapper) {
+			if (!this._wnodeWrapperToDomNodeMap.get(parentWNodeWrapper)) {
+				this._wnodeWrapperToDomNodeMap.set(parentWNodeWrapper, domNode);
+			}
+		}
 		if (next.node.children) {
 			// this should be a method function
-			const children = renderedToWrapper(next.node.children, next, this._dnodeToParentWrapperMap);
+			const children = this._renderedToWrapper(next.node.children, next);
 			next.childrenWrappers = children;
 			this._queueInRender([], children);
 		}
 
-		// we don't want to append until the children have been appended. This was done before by it being recursive and
-		// therefore waited until the children had been completed.
-		this._queueApplication(() => {
-			this._setProperties(domNode as HTMLElement, {}, next.node.properties);
-			parentDomNode.appendChild(domNode);
+		this._queueApplication({
+			node: next.node,
+			apply: () => {
+				this._setProperties(domNode as HTMLElement, {}, next.node.properties);
+				parentDomNode.insertBefore(domNode, this._findInsertBefore(next));
+			}
 		});
 	}
 
@@ -326,12 +435,21 @@ export class Renderer {
 			next.domNode = newDomNode;
 		} else {
 			if (next.node.children) {
-				const children = renderedToWrapper(next.node.children, next, this._dnodeToParentWrapperMap);
+				const children = this._renderedToWrapper(next.node.children, next);
 				next.childrenWrappers = children;
 				this._queueInRender(current.childrenWrappers!, children);
 			}
 			this._setProperties(domNode as HTMLElement, current.node.properties, next.node.properties);
 		}
+	}
+
+	private _removeDom(current: VNodeWrapper) {
+		this._queueApplication({
+			node: current.node,
+			apply: () => {
+				current.domNode!.parentNode!.removeChild(current.domNode!);
+			}
+		});
 	}
 
 	private _setProperties(domNode: HTMLElement, currentProperties: VNodeProperties, nextProperties: VNodeProperties) {
