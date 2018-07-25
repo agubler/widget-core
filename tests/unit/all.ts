@@ -13,4 +13,4 @@
 // import './meta/all';
 // import './vdom';
 // import './registerCustomElement';
-import './vdom1';
+import './vdom3';

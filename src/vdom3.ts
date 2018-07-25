@@ -1,5 +1,13 @@
 import { WeakMap } from '@dojo/shim/WeakMap';
-import { WNode, VNode, DNode, WidgetBaseInterface, VNodeProperties, SupportedClassName } from './interfaces';
+import {
+	WNode,
+	VNode,
+	DNode,
+	WidgetBaseInterface,
+	VNodeProperties,
+	SupportedClassName,
+	WidgetBaseConstructor
+} from './interfaces';
 import { isVNode, isWNode, VNODE, WNODE } from './d';
 import { WidgetData } from './vdom';
 
@@ -12,7 +20,7 @@ interface WNodeWrapper {
 
 interface VNodeWrapper {
 	node: VNode;
-	domNode?: HTMLElement | Text;
+	domNode?: Node;
 	childrenWrappers?: DNodeWrapper[];
 	nextWrapper?: DNodeWrapper;
 }
@@ -34,6 +42,15 @@ interface Instruction {
 	next: undefined | DNodeWrapper;
 }
 
+interface ParentNodes {
+	parentDomNode: Node;
+	parentWNodeWrapper?: WNodeWrapper;
+}
+
+interface DomApply {
+	(): void;
+}
+
 function isWNodeWrapper(child: DNodeWrapper): child is WNodeWrapper {
 	return isWNode(child.node);
 }
@@ -42,9 +59,9 @@ function isVNodeWrapper(child: DNodeWrapper): child is VNodeWrapper {
 	return isVNode(child.node);
 }
 
-export const widgetInstanceMap = new WeakMap<any, WidgetData>();
+export const widgetInstanceMap = new WeakMap<WidgetBaseInterface, WidgetData>();
 
-function same(dnode1: DNode, dnode2: DNode) {
+function same(dnode1: DNode, dnode2: DNode): boolean {
 	if (isVNode(dnode1) && isVNode(dnode2)) {
 		if (dnode1.tag !== dnode2.tag) {
 			return false;
@@ -68,7 +85,7 @@ function same(dnode1: DNode, dnode2: DNode) {
 	return false;
 }
 
-function findIndexOfChild(children: any[], sameAs: any, start: number) {
+function findIndexOfChild(children: DNodeWrapper[], sameAs: DNode, start: number) {
 	for (let i = start; i < children.length; i++) {
 		if (same(children[i].node, sameAs)) {
 			return i;
@@ -115,13 +132,13 @@ export class Renderer {
 	private _wrapperSiblingMap = new WeakMap<DNodeWrapper, DNodeWrapper>();
 	private _wnodeWrapperToDomNodeMap = new WeakMap<WNodeWrapper, Node>();
 	private _renderScheduled = false;
-	private _applicationQueue: { apply: Function; node: any }[] = [];
+	private _applicationQueue: DomApply[] = [];
 
 	constructor(renderer: () => WNode) {
 		this._renderer = renderer;
 	}
 
-	public append(node?: HTMLElement) {
+	public append(node?: HTMLElement): void {
 		if (node) {
 			this._rootNode = node;
 		}
@@ -130,13 +147,13 @@ export class Renderer {
 		this._runRenderQueue();
 	}
 
-	private _schedule() {
+	private _schedule(): void {
 		if (!this._renderScheduled) {
 			this._runInvalidationQueue();
 		}
 	}
 
-	private _runInvalidationQueue() {
+	private _runInvalidationQueue(): void {
 		const invalidationQueue = [...this._invalidationQueue];
 		this._invalidationQueue = [];
 		while (invalidationQueue.length) {
@@ -146,49 +163,31 @@ export class Renderer {
 		}
 	}
 
-	private _runRenderQueue() {
+	private _runRenderQueue(): void {
 		while (this._renderQueue.length) {
 			const { current, next } = this._renderQueue.pop()!;
 			this._process(current, next);
 		}
 		this._applicationQueue.reverse();
-		let temp: any[] = [];
-		let previousParentDom: any = undefined;
-		let q: any[] = [];
 		while (this._applicationQueue.length) {
-			const item = this._applicationQueue.pop()!;
-			const parentDomNode = this._getParentDomNode(item.node);
-			if (!previousParentDom || previousParentDom === parentDomNode) {
-				temp.push(item.apply);
-			} else {
-				q.push(temp.reverse());
-				temp = [item.apply];
-			}
-			previousParentDom = parentDomNode;
-		}
-		q.push(temp.reverse());
-		while (q.length) {
-			const a = q.pop()!;
-			while (a.length) {
-				const b = a.pop()!;
-				b();
-			}
+			const apply = this._applicationQueue.pop()!;
+			apply();
 		}
 	}
 
-	private _queueInRender(current: DNodeWrapper[], next: DNodeWrapper[]) {
+	private _queueInRender(current: DNodeWrapper[], next: DNodeWrapper[]): void {
 		this._renderQueue.push({ current, next });
 	}
 
-	private _queueApplication(a: { apply: Function; node: any }) {
-		this._applicationQueue.push(a);
+	private _queueApplication(apply: DomApply): void {
+		this._applicationQueue.push(apply);
 	}
 
-	private _queue(instance: WidgetBaseInterface) {
+	private _queue(instance: WidgetBaseInterface): void {
 		const next = {
 			node: {
 				type: WNODE,
-				widgetConstructor: instance.constructor as any,
+				widgetConstructor: instance.constructor as WidgetBaseConstructor,
 				properties: instance.properties,
 				children: instance.children
 			},
@@ -203,14 +202,14 @@ export class Renderer {
 		let previousItem: DNodeWrapper | undefined;
 		for (let i = 0; i < rendered.length; i++) {
 			let renderedItem = rendered[i];
-			if (renderedItem == null) {
+			if (renderedItem === null || renderedItem === undefined) {
 				continue;
 			}
 			if (typeof renderedItem === 'string') {
 				renderedItem = toTextVNode(renderedItem);
 			}
 			this._dnodeToParentWrapperMap.set(renderedItem, parent);
-			const wrapper = { node: renderedItem as any };
+			const wrapper = { node: renderedItem } as DNodeWrapper;
 			if (previousItem) {
 				this._wrapperSiblingMap.set(previousItem, wrapper);
 			}
@@ -220,7 +219,7 @@ export class Renderer {
 		return wrappedRendered;
 	}
 
-	private _process(current: DNodeWrapper[], next: DNodeWrapper[]) {
+	private _process(current: DNodeWrapper[], next: DNodeWrapper[]): void {
 		const instructions: Instruction[] = [];
 		const foundIndexes: number[] = [];
 		for (let i = 0; i < next.length; i++) {
@@ -249,7 +248,7 @@ export class Renderer {
 		}
 	}
 
-	private _processOne(instruction: Instruction) {
+	private _processOne(instruction: Instruction): void {
 		let { current, next } = instruction;
 		if (!current && next) {
 			if (isVNodeWrapper(next)) {
@@ -272,39 +271,26 @@ export class Renderer {
 		}
 	}
 
-	private _getParentWNodeWrapper(currentNode: VNode | WNode) {
+	private _findParentNodes(currentNode: VNode | WNode): ParentNodes {
+		let parentDomNode: Node | undefined;
 		let parentWNodeWrapper: WNodeWrapper | undefined;
-		while (!parentWNodeWrapper) {
+		while (!parentDomNode || !parentWNodeWrapper) {
 			const parentWrapper: DNodeWrapper = this._dnodeToParentWrapperMap.get(currentNode)!;
-			if (!parentWrapper) {
+			if (!parentDomNode && !parentWrapper) {
+				parentDomNode = this._rootNode;
 				break;
 			}
-			if (isWNodeWrapper(parentWrapper)) {
+			if (!parentDomNode && isVNodeWrapper(parentWrapper) && parentWrapper.domNode) {
+				parentDomNode = parentWrapper.domNode;
+			} else if (!parentWNodeWrapper && isWNodeWrapper(parentWrapper)) {
 				parentWNodeWrapper = parentWrapper;
 			}
 			currentNode = parentWrapper.node;
 		}
-		return parentWNodeWrapper;
+		return { parentDomNode, parentWNodeWrapper };
 	}
 
-	private _getParentDomNode(currentNode: VNode | WNode) {
-		let parentDomNode: Node | undefined;
-		while (!parentDomNode) {
-			const parentWrapper: DNodeWrapper = this._dnodeToParentWrapperMap.get(currentNode)!;
-			if (!parentWrapper) {
-				parentDomNode = this._rootNode;
-				break;
-			}
-			if (isVNodeWrapper(parentWrapper) && parentWrapper.domNode) {
-				parentDomNode = parentWrapper.domNode;
-				break;
-			}
-			currentNode = parentWrapper.node;
-		}
-		return parentDomNode;
-	}
-
-	private _createWidget(next: WNodeWrapper) {
+	private _createWidget(next: WNodeWrapper): void {
 		if (typeof next.node.widgetConstructor === 'string' || typeof next.node.widgetConstructor === 'symbol') {
 			throw new Error('Do not support registry items');
 		}
@@ -332,9 +318,9 @@ export class Renderer {
 		}
 	}
 
-	private _updateWidget(current: WNodeWrapper, next: WNodeWrapper) {
+	private _updateWidget(current: WNodeWrapper, next: WNodeWrapper): void {
 		next.instance = current.instance;
-		const instanceData = widgetInstanceMap.get(next.instance)!;
+		const instanceData = widgetInstanceMap.get(next.instance!)!;
 		current = this._instanceToWrapperMap.get(next.instance!)!;
 		instanceData.rendering = true;
 		next.instance!.__setProperties__(next.node.properties);
@@ -363,11 +349,15 @@ export class Renderer {
 	}
 
 	private _removeWidget(current: WNodeWrapper) {
+		this._instanceToWrapperMap.delete(current.instance!);
+		this._wrapperSiblingMap.delete(current);
+		this._dnodeToParentWrapperMap.delete(current.node);
+		this._wnodeWrapperToDomNodeMap.delete(current);
 		this._queueInRender(current.rendered || [], []);
 	}
 
-	private _findInsertBefore(next: DNodeWrapper) {
-		let insertBefore: any = null;
+	private _findInsertBefore(next: DNodeWrapper): Node | null {
+		let insertBefore: Node | null = null;
 		while (!insertBefore) {
 			const nextSibling = this._wrapperSiblingMap.get(next);
 			if (nextSibling) {
@@ -394,42 +384,39 @@ export class Renderer {
 		return insertBefore;
 	}
 
-	private _createDom(next: VNodeWrapper) {
-		const parentDomNode = this._getParentDomNode(next.node);
-		let domNode: any;
+	private _createDom(next: VNodeWrapper): void {
+		const { parentDomNode, parentWNodeWrapper } = this._findParentNodes(next.node);
+		let domNode: Node | undefined;
 		if (next.node.tag) {
 			domNode = document.createElement(next.node.tag);
 		} else if (next.node.text) {
 			domNode = document.createTextNode(next.node.text);
 		}
-		next.domNode = domNode;
-		const parentWNodeWrapper = this._getParentWNodeWrapper(next.node);
-		if (parentWNodeWrapper) {
-			if (!this._wnodeWrapperToDomNodeMap.get(parentWNodeWrapper)) {
-				this._wnodeWrapperToDomNodeMap.set(parentWNodeWrapper, domNode);
+		if (domNode) {
+			next.domNode = domNode;
+			if (parentWNodeWrapper) {
+				if (!this._wnodeWrapperToDomNodeMap.get(parentWNodeWrapper)) {
+					this._wnodeWrapperToDomNodeMap.set(parentWNodeWrapper, domNode);
+				}
 			}
-		}
-		if (next.node.children) {
-			// this should be a method function
-			const children = this._renderedToWrapper(next.node.children, next);
-			next.childrenWrappers = children;
-			this._queueInRender([], children);
-		}
+			if (next.node.children) {
+				const children = this._renderedToWrapper(next.node.children, next);
+				next.childrenWrappers = children;
+				this._queueInRender([], children);
+			}
 
-		this._queueApplication({
-			node: next.node,
-			apply: () => {
+			this._queueApplication(() => {
 				this._setProperties(domNode as HTMLElement, {}, next.node.properties);
-				parentDomNode.insertBefore(domNode, this._findInsertBefore(next));
-			}
-		});
+				parentDomNode.insertBefore(domNode as Node, this._findInsertBefore(next));
+			});
+		}
 	}
 
-	private _updateDom(current: VNodeWrapper, next: VNodeWrapper) {
-		const parentDomNode = this._getParentDomNode(current.node);
+	private _updateDom(current: VNodeWrapper, next: VNodeWrapper): void {
+		const { parentDomNode } = this._findParentNodes(current.node);
 		let domNode = current.domNode!;
 		next.domNode = domNode;
-		if (next.node.text) {
+		if (next.node.text && next.node.text !== current.node.text) {
 			const newDomNode = parentDomNode.ownerDocument.createTextNode(next.node.text!);
 			parentDomNode.replaceChild(newDomNode, domNode);
 			next.domNode = newDomNode;
@@ -443,16 +430,19 @@ export class Renderer {
 		}
 	}
 
-	private _removeDom(current: VNodeWrapper) {
-		this._queueApplication({
-			node: current.node,
-			apply: () => {
-				current.domNode!.parentNode!.removeChild(current.domNode!);
-			}
+	private _removeDom(current: VNodeWrapper): void {
+		this._wrapperSiblingMap.delete(current);
+		this._dnodeToParentWrapperMap.delete(current.node);
+		this._queueApplication(() => {
+			current.domNode!.parentNode!.removeChild(current.domNode!);
 		});
 	}
 
-	private _setProperties(domNode: HTMLElement, currentProperties: VNodeProperties, nextProperties: VNodeProperties) {
+	private _setProperties(
+		domNode: HTMLElement,
+		currentProperties: VNodeProperties,
+		nextProperties: VNodeProperties
+	): void {
 		const propNames = Object.keys(nextProperties);
 		const propCount = propNames.length;
 		if (propNames.indexOf('classes') === -1 && currentProperties.classes) {
