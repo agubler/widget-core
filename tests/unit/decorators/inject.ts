@@ -28,8 +28,8 @@ registerSuite('decorators/inject', {
 			@inject({ name: 'inject-one', getProperties })
 			class TestWidget extends WidgetBase<any> {}
 			const widget = new TestWidget();
-			widget.__setCoreProperties__({ bind: widget, baseRegistry: registry });
-			widget.__setProperties__({});
+			widget.registry.base = registry;
+			widget.__setProperties__({}, widget);
 
 			assert.strictEqual(widget.properties.foo, 'bar');
 		},
@@ -45,8 +45,8 @@ registerSuite('decorators/inject', {
 			@inject({ name: 'inject-two', getProperties: getPropertiesTwo })
 			class TestWidget extends WidgetBase<any> {}
 			const widget = new TestWidget();
-			widget.__setCoreProperties__({ bind: widget, baseRegistry: registry });
-			widget.__setProperties__({});
+			widget.registry.base = registry;
+			widget.__setProperties__({}, widget);
 			assert.strictEqual(widget.properties.foo, 'bar');
 			assert.strictEqual(widget.properties.bar, 'foo');
 		},
@@ -66,8 +66,8 @@ registerSuite('decorators/inject', {
 				}
 			}
 			const widget = new TestWidget();
-			widget.__setCoreProperties__({ bind: widget, baseRegistry: registry });
-			widget.__setProperties__({});
+			widget.registry.base = registry;
+			widget.__setProperties__({}, widget);
 			assert.strictEqual(widget.properties.foo, 'bar');
 			assert.strictEqual(widget.properties.bar, 'foo');
 		},
@@ -96,7 +96,7 @@ registerSuite('decorators/inject', {
 				}
 			}
 			const widget = new TestWidget();
-			widget.__setCoreProperties__({ bind: widget, baseRegistry: registry });
+			widget.registry.base = registry;
 			widget.__setProperties__({});
 			testInvalidate.invalidator();
 			assert.strictEqual(invalidateCounter, 2);

@@ -3,7 +3,7 @@ const { assert } = intern.getPlugin('chai');
 import { stub, SinonStub } from 'sinon';
 
 import { v } from './../../../src/d';
-import { DNode, Render } from './../../../src/interfaces';
+import { DNode, Render, VNode } from './../../../src/interfaces';
 import { beforeRender } from './../../../src/decorators/beforeRender';
 import { WidgetBase } from './../../../src/WidgetBase';
 
@@ -105,7 +105,8 @@ registerSuite('decorators/beforeRender', {
 
 			const widget = new TestWidget();
 			const renderResult = widget.__render__();
-			assert.strictEqual(renderResult, 'first render');
+			assert.lengthOf(renderResult, 1);
+			assert.strictEqual((renderResult[0] as VNode).text, 'first render');
 			assert.isTrue(consoleStub.calledOnce);
 			assert.isTrue(
 				consoleStub.calledWith('Render function not returned from beforeRender, using previous render')

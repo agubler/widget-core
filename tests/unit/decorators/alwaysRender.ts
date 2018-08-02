@@ -3,8 +3,8 @@ const { assert } = intern.getPlugin('chai');
 
 import { WidgetBase } from './../../../src/WidgetBase';
 import { w } from './../../../src/d';
-import { ProjectorMixin } from './../../../src/mixins/Projector';
 import { alwaysRender } from './../../../src/decorators/alwaysRender';
+import { renderer } from '../../../src/vdom4';
 
 describe('decorators/alwaysRender', () => {
 	it('Widgets should always render', () => {
@@ -18,19 +18,23 @@ describe('decorators/alwaysRender', () => {
 			}
 		}
 
-		class Parent extends ProjectorMixin(WidgetBase) {
+		let invalidate: any;
+		class Parent extends WidgetBase {
+			constructor() {
+				super();
+				invalidate = this.invalidate.bind(this);
+			}
 			render() {
 				return w(Widget, {});
 			}
 		}
 
-		const projector = new Parent();
-		projector.async = false;
-		projector.setProperties({});
-		projector.append();
+		const r = renderer(() => w(Parent, {}));
+		r.sync = true;
+		r.append();
+		invalidate();
 		assert.strictEqual(renderCount, 1);
-
-		projector.invalidate();
+		invalidate();
 		assert.strictEqual(renderCount, 2);
 	});
 });

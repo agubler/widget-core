@@ -4,7 +4,7 @@ const { assert } = intern.getPlugin('chai');
 
 import { registry } from './../../../src/decorators/registry';
 import { WidgetBase } from './../../../src/WidgetBase';
-import ProjectorMixin from './../../../src/mixins/Projector';
+import { renderer } from '../../../src/vdom4';
 
 export class Widget1 extends WidgetBase {
 	protected render() {
@@ -27,12 +27,10 @@ describe('decorators/registry', () => {
 			}
 		}
 
-		const Projector = ProjectorMixin(TestWidget1);
-		const projector = new Projector();
-		projector.async = false;
-
+		const r = renderer(() => w(TestWidget1, {}));
+		r.sync = true;
 		const root = document.createElement('div');
-		projector.append(root);
+		r.append(root);
 
 		assert.strictEqual(root.querySelectorAll('.widget1').length, 1);
 		assert.strictEqual(root.querySelectorAll('.widget2').length, 0);
@@ -49,12 +47,10 @@ describe('decorators/registry', () => {
 			}
 		}
 
-		const Projector = ProjectorMixin(TestWidget2);
-		const projector = new Projector();
-		projector.async = false;
-
+		const r = renderer(() => w(TestWidget2, {}));
+		r.sync = true;
 		const root = document.createElement('div');
-		projector.append(root);
+		r.append(root);
 
 		assert.strictEqual(root.querySelectorAll('.widget1').length, 1);
 		assert.strictEqual(root.querySelectorAll('.widget2').length, 1);

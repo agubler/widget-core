@@ -9,9 +9,10 @@ import {
 	VNodeProperties,
 	WidgetBaseInterface,
 	WNode,
-	DomOptions
+	DomOptions,
+	RenderResult
 } from './interfaces';
-import { InternalVNode, RenderResult } from './vdom';
+// import { InternalVNode, RenderResult } from './vdom';
 
 /**
  * The symbol identifier for a WNode type
@@ -202,5 +203,5 @@ export function dom(
 		domNode: node,
 		text: isElementNode(node) ? undefined : node.data,
 		diffType
-	} as InternalVNode;
+	} as any;
 }

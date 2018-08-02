@@ -195,10 +195,10 @@ registerSuite('mixins/I18nMixin', {
 
 				registry.defineInjector(INJECTOR_KEY, injector);
 				localized = new Localized();
-				localized.__setCoreProperties__({ bind: localized, baseRegistry: registry });
+				localized.registry.base = registry;
 				localized.__setProperties__({});
 
-				const result = localized.__render__();
+				const [result] = localized.__render__();
 				assert.strictEqual(result.properties!['lang'], 'ar');
 				assert.strictEqual(result.properties!['dir'], 'rtl');
 			},
@@ -209,10 +209,10 @@ registerSuite('mixins/I18nMixin', {
 
 				registry.defineInjector(INJECTOR_KEY, injector);
 				localized = new Localized();
-				localized.__setCoreProperties__({ bind: localized, baseRegistry: registry });
+				localized.registry.base = registry;
 				localized.__setProperties__({ locale: 'fr', rtl: false });
 
-				const result = localized.__render__();
+				const [result] = localized.__render__();
 				assert.strictEqual(result.properties!['lang'], 'fr');
 				assert.strictEqual(result.properties!['dir'], 'ltr');
 			},
@@ -222,15 +222,15 @@ registerSuite('mixins/I18nMixin', {
 				const injector = registerI18nInjector({ locale: 'fr' }, registry);
 
 				localized = new Localized();
-				localized.__setCoreProperties__({ bind: localized, baseRegistry: registry });
+				localized.registry.base = registry;
 				localized.__setProperties__({});
 
-				let result = localized.__render__();
+				let [result] = localized.__render__();
 				assert.strictEqual(result.properties!['lang'], 'fr');
 
 				injector.set({ locale: 'jp' });
 				localized.__setProperties__({});
-				result = localized.__render__();
+				result = localized.__render__()[0];
 				assert.strictEqual(result.properties!['lang'], 'jp');
 			}
 		},
@@ -244,7 +244,7 @@ registerSuite('mixins/I18nMixin', {
 			localized = new LocalizedExtended();
 			localized.__setProperties__({ locale: 'ar-JO' });
 
-			const result = localized.__render__();
+			const [result] = localized.__render__();
 			assert.isOk(result);
 			assert.isUndefined(result.properties!['lang']);
 		},
@@ -253,7 +253,7 @@ registerSuite('mixins/I18nMixin', {
 				localized = new Localized();
 				localized.__setProperties__({ locale: 'ar-JO' });
 
-				const result = localized.__render__();
+				const [result] = localized.__render__();
 				assert.isOk(result);
 				assert.strictEqual(result.properties!['lang'], 'ar-JO');
 			},
@@ -261,7 +261,7 @@ registerSuite('mixins/I18nMixin', {
 			'when empty'() {
 				localized = new Localized();
 
-				const result = localized.__render__();
+				const [result] = localized.__render__();
 				assert.isOk(result);
 				assert.isUndefined(result.properties!['lang']);
 			}
@@ -272,7 +272,7 @@ registerSuite('mixins/I18nMixin', {
 				localized = new Localized();
 				localized.__setProperties__({ rtl: true });
 
-				const result = localized.__render__();
+				const [result] = localized.__render__();
 				assert.isOk(result);
 				assert.strictEqual(result.properties!['dir'], 'rtl');
 			},
@@ -281,7 +281,7 @@ registerSuite('mixins/I18nMixin', {
 				localized = new Localized();
 				localized.__setProperties__({ rtl: false });
 
-				const result = localized.__render__();
+				const [result] = localized.__render__();
 				assert.isOk(result);
 				assert.strictEqual(result.properties!['dir'], 'ltr');
 			},
@@ -289,7 +289,7 @@ registerSuite('mixins/I18nMixin', {
 			'The `dir` attribute is not set when not a boolean.'() {
 				localized = new Localized();
 
-				const result = localized.__render__();
+				const [result] = localized.__render__();
 				assert.isOk(result);
 				assert.isUndefined(result.properties.dir);
 			},
@@ -298,7 +298,7 @@ registerSuite('mixins/I18nMixin', {
 				localized = new LocalizedWithWidget();
 				localized.__setProperties__({ rtl: false });
 
-				const result = localized.__render__();
+				const [result] = localized.__render__();
 				assert.isOk(result);
 				assert.isUndefined(result.properties!['dir']);
 				assert.strictEqual(result.children[0].properties!['dir'], 'ltr');

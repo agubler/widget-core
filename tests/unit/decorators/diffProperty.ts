@@ -5,7 +5,7 @@ import { PropertyChangeRecord } from './../../../src/interfaces';
 import { always, ignore } from './../../../src/diff';
 import { diffProperty } from './../../../src/decorators/diffProperty';
 import { WidgetBase } from './../../../src/WidgetBase';
-import { widgetInstanceMap } from './../../../src/vdom';
+import { widgetInstanceMap } from './../../../src/vdom4';
 
 interface TestProperties {
 	id?: string;

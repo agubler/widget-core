@@ -19,6 +19,7 @@ import * as extraClasses1 from './../../support/styles/extraClasses1.css';
 import testTheme1 from './../../support/styles/theme1.css';
 import testTheme2 from './../../support/styles/theme2.css';
 import testTheme3 from './../../support/styles/theme3.css';
+import { VNode } from '../../../src/interfaces';
 
 (baseThemeClasses1 as any)[' _key'] = 'testPath1';
 (baseThemeClasses2 as any)[' _key'] = 'testPath2';
@@ -209,9 +210,9 @@ registerSuite('ThemedMixin', {
 					}
 				}
 				const ThemedInstance = new InjectedTheme();
-				ThemedInstance.__setCoreProperties__({ bind: ThemedInstance, baseRegistry: testRegistry });
+				ThemedInstance.registry.base = testRegistry;
 				ThemedInstance.__setProperties__({});
-				const renderResult: any = ThemedInstance.__render__();
+				const [renderResult] = ThemedInstance.__render__() as VNode[];
 				assert.deepEqual(renderResult.properties.classes, 'theme1Class1');
 			},
 			'theme will not be injected if a theme has been passed via a property'() {
@@ -223,9 +224,9 @@ registerSuite('ThemedMixin', {
 					}
 				}
 				const ThemedInstance = new InjectedTheme();
-				ThemedInstance.__setCoreProperties__({ bind: ThemedInstance, baseRegistry: testRegistry });
+				ThemedInstance.registry.base = testRegistry;
 				ThemedInstance.__setProperties__({ theme: testTheme2 });
-				const renderResult: any = ThemedInstance.__render__();
+				const [renderResult] = ThemedInstance.__render__() as VNode[];
 				assert.deepEqual(renderResult.properties.classes, 'theme2Class1');
 			},
 			'does not attempt to inject if the ThemeInjector has not been defined in the registry'() {
@@ -235,7 +236,7 @@ registerSuite('ThemedMixin', {
 					}
 				}
 				const ThemedInstance = new InjectedTheme();
-				const renderResult: any = ThemedInstance.__render__();
+				const [renderResult] = ThemedInstance.__render__() as VNode[];
 				assert.deepEqual(renderResult.properties.classes, 'baseClass1');
 			},
 			'setting the theme invalidates and the new theme is used'() {
@@ -247,20 +248,20 @@ registerSuite('ThemedMixin', {
 				}
 
 				const testWidget = new InjectedTheme();
-				testWidget.__setCoreProperties__({ bind: testWidget, baseRegistry: testRegistry });
-				let renderResult: any = testWidget.__render__();
+				testWidget.registry.base = testRegistry;
+				let [renderResult] = testWidget.__render__() as VNode[];
 				assert.deepEqual(renderResult.properties.classes, baseThemeClasses1.class1);
 				themeInjectorContext.set(testTheme2);
 				testWidget.__setProperties__({});
-				renderResult = testWidget.__render__();
+				renderResult = testWidget.__render__()[0] as VNode;
 				assert.deepEqual(renderResult.properties.classes, 'theme2Class1');
 				themeInjectorContext.set(testTheme1);
 				testWidget.__setProperties__({});
-				renderResult = testWidget.__render__();
+				renderResult = testWidget.__render__()[0] as VNode;
 				assert.deepEqual(renderResult.properties.classes, 'theme1Class1');
 				themeInjectorContext.set(testTheme1);
 				testWidget.__setProperties__({ foo: 'bar' });
-				renderResult = testWidget.__render__();
+				renderResult = testWidget.__render__()[0] as VNode;
 				assert.deepEqual(renderResult.properties.classes, 'theme1Class1');
 			}
 		},
@@ -282,7 +283,7 @@ registerSuite('ThemedMixin', {
 				const ThemedWidget: any = new IntegrationTest();
 				ThemedWidget.__setProperties__({ theme: testTheme1 });
 
-				const result = ThemedWidget.__render__();
+				const [result] = ThemedWidget.__render__();
 				assert.deepEqual(result.children![0].properties!.classes, [
 					testTheme1.testPath1.class1,
 					fixedClassName
@@ -290,7 +291,7 @@ registerSuite('ThemedMixin', {
 
 				ThemedWidget.__setProperties__({ theme: testTheme2 });
 
-				const result2 = ThemedWidget.__render__();
+				const [result2] = ThemedWidget.__render__();
 				assert.deepEqual(result2.children![0].properties!.classes, [
 					testTheme2.testPath1.class1,
 					fixedClassName
