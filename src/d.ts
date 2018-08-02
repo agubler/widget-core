@@ -10,7 +10,9 @@ import {
 	WidgetBaseInterface,
 	WNode,
 	DomOptions,
-	RenderResult
+	RenderResult,
+	DomVNode,
+	VDomOptions
 } from './interfaces';
 // import { InternalVNode, RenderResult } from './vdom';
 
@@ -48,7 +50,7 @@ export function isVNode(child: DNode): child is VNode {
 /**
  * Helper function that returns true if the `DNode` is a `VNode` created with `dom()` using the `type` property
  */
-export function isDomVNode(child: DNode): child is VNode {
+export function isDomVNode(child: DNode): child is DomVNode {
 	return Boolean(child && typeof child !== 'string' && child.type === DOMVNODE);
 }
 
@@ -192,7 +194,7 @@ export function v(
 export function dom(
 	{ node, attrs = {}, props = {}, on = {}, diffType = 'none' }: DomOptions,
 	children?: DNode[]
-): VNode {
+): DomVNode {
 	return {
 		tag: isElementNode(node) ? node.tagName.toLowerCase() : '',
 		properties: props,
@@ -203,5 +205,5 @@ export function dom(
 		domNode: node,
 		text: isElementNode(node) ? undefined : node.data,
 		diffType
-	} as any;
+	};
 }

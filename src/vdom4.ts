@@ -1,4 +1,5 @@
 import global from '@dojo/shim/global';
+import { from as arrayFrom } from '@dojo/shim/array';
 import { WeakMap } from '@dojo/shim/WeakMap';
 import {
 	WNode,
@@ -10,7 +11,7 @@ import {
 	DefaultWidgetBaseInterface,
 	Constructor
 } from './interfaces';
-import { isVNode, isWNode, WNODE, v } from './d';
+import { isVNode, isWNode, WNODE, v, isDomVNode } from './d';
 import { Registry, isWidgetBaseConstructor } from './Registry';
 import { WidgetBase } from './WidgetBase';
 import NodeHandler from './NodeHandler';
@@ -39,11 +40,13 @@ export interface BaseNodeWrapper {
 export interface WNodeWrapper extends BaseNodeWrapper {
 	node: WNode;
 	instance?: WidgetBase;
+	mergeNodes?: any[];
 }
 
 export interface VNodeWrapper extends BaseNodeWrapper {
 	node: VNode;
 	domNode?: Node;
+	merged?: boolean;
 }
 
 export type DNodeWrapper = VNodeWrapper | WNodeWrapper;
@@ -51,6 +54,7 @@ export type DNodeWrapper = VNodeWrapper | WNodeWrapper;
 interface RenderQueueItem {
 	current: (WNodeWrapper | VNodeWrapper)[];
 	next: (WNodeWrapper | VNodeWrapper)[];
+	mergeNodes?: any[];
 }
 
 interface InvalidationQueueItem {
@@ -114,7 +118,7 @@ export interface DeleteDomApplication {
 
 export type DomApplicatorInstruction = CreateDomApplication | DeleteDomApplication;
 
-export const widgetInstanceMap = new WeakMap<any, WidgetData>();
+export const widgetInstanceMap = new WeakMap<WidgetBase, WidgetData>();
 
 const nodeOperations = ['focus', 'blur', 'scrollIntoView', 'click'];
 
@@ -247,6 +251,14 @@ function findParentNodes(currentNode: VNode | WNode, { parent }: TraversalMaps):
 
 function same(dnode1: DNode, dnode2: DNode): boolean {
 	if (isVNode(dnode1) && isVNode(dnode2)) {
+		if (isDomVNode(dnode1) && isDomVNode(dnode2)) {
+			if (dnode1.domNode !== dnode2.domNode) {
+				return false;
+			}
+		}
+		if (isDomVNode(dnode1) || isDomVNode(dnode2)) {
+			return false;
+		}
 		if (dnode1.tag !== dnode2.tag) {
 			return false;
 		}
@@ -307,20 +319,11 @@ function findInsertBefore(next: VNodeWrapper, { sibling, parent }: TraversalMaps
 	return insertBefore;
 }
 
-function addClasses(domNode: Element, classes: SupportedClassName) {
+function classes(domNode: any, classes: SupportedClassName, op: string) {
 	if (classes) {
 		const classNames = classes.split(' ');
 		for (let i = 0; i < classNames.length; i++) {
-			domNode.classList.add(classNames[i]);
-		}
-	}
-}
-
-function removeClasses(domNode: Element, classes: SupportedClassName) {
-	if (classes) {
-		const classNames = classes.split(' ');
-		for (let i = 0; i < classNames.length; i++) {
-			domNode.classList.remove(classNames[i]);
+			domNode.classList[op](classNames[i]);
 		}
 	}
 }
@@ -336,10 +339,10 @@ function setProperties(
 	if (propNames.indexOf('classes') === -1 && currentProperties.classes) {
 		if (Array.isArray(currentProperties.classes)) {
 			for (let i = 0; i < currentProperties.classes.length; i++) {
-				removeClasses(domNode, currentProperties.classes[i]);
+				classes(domNode, currentProperties.classes[i], 'remove');
 			}
 		} else {
-			removeClasses(domNode, currentProperties.classes);
+			classes(domNode, currentProperties.classes, 'remove');
 		}
 	}
 
@@ -355,7 +358,7 @@ function setProperties(
 			if (previousClasses && previousClasses.length > 0) {
 				if (!propValue || propValue.length === 0) {
 					for (let i = 0; i < previousClasses.length; i++) {
-						removeClasses(domNode, previousClasses[i]);
+						classes(domNode, previousClasses[i], 'remove');
 					}
 				} else {
 					const newClasses: (null | undefined | string)[] = [...currentClasses];
@@ -364,19 +367,19 @@ function setProperties(
 						if (previousClassName) {
 							const classIndex = newClasses.indexOf(previousClassName);
 							if (classIndex === -1) {
-								removeClasses(domNode, previousClassName);
+								classes(domNode, previousClassName, 'remove');
 							} else {
 								newClasses.splice(classIndex, 1);
 							}
 						}
 					}
 					for (let i = 0; i < newClasses.length; i++) {
-						addClasses(domNode, newClasses[i]);
+						classes(domNode, newClasses[i], 'add');
 					}
 				}
 			} else {
 				for (let i = 0; i < currentClasses.length; i++) {
-					addClasses(domNode, currentClasses[i]);
+					classes(domNode, currentClasses[i], 'add');
 				}
 			}
 		} else if (nodeOperations.indexOf(propName) !== -1) {
@@ -444,7 +447,7 @@ export class Renderer {
 	private _domNodeToWrapperMap = new WeakMap<Node, VNodeWrapper>();
 	private _wrapperSiblingMap = new WeakMap<DNodeWrapper, DNodeWrapper>();
 	private _renderScheduled: number | undefined;
-	private _merge = false;
+	private _merge = true;
 
 	constructor(renderer: () => WNode) {
 		this._renderer = renderer;
@@ -458,18 +461,26 @@ export class Renderer {
 		this._registry = registry;
 	}
 
-	public set merge(merge: boolean) {
-		this._merge = merge;
-	}
-
 	public append(node?: HTMLElement): void {
 		if (node) {
 			this._rootNode = node;
 		}
 		const renderResult = this._renderer();
 		this._dnodeToParentWrapperMap.set(renderResult, { depth: 0, domNode: this._rootNode, node: v('fake') });
-		this._queueInRender([{ current: [], next: [{ node: renderResult, depth: 1 }] }]);
+		this._queueInRender([
+			{
+				current: [],
+				next: [
+					{
+						node: renderResult,
+						depth: 1
+					}
+				],
+				mergeNodes: arrayFrom(this._rootNode.childNodes)
+			}
+		]);
 		this._runRenderQueue();
+		this._merge = false;
 	}
 
 	private _schedule(): void {
@@ -504,7 +515,7 @@ export class Renderer {
 			if (isDomApplicatorInstruction(item)) {
 				this._process(item);
 			} else {
-				this._process(item.current, item.next);
+				this._process(item.current, item.next, item.mergeNodes);
 			}
 		}
 		this._runDomInstructionQueue();
@@ -515,16 +526,14 @@ export class Renderer {
 			const item = this._domInstructionQueue.pop()!;
 			if (item.type === 'create') {
 				setProperties(item.next!.domNode as HTMLElement, undefined, item.next.node, this._eventMap);
-				let insertBefore: any;
-				if (item.next.findInsertBefore) {
-					insertBefore = findInsertBefore(item.next, this._getTraversalMaps());
-				}
-				if (insertBefore) {
+				if (!item.next.merged) {
+					let insertBefore: any;
+					if (item.next.findInsertBefore) {
+						insertBefore = findInsertBefore(item.next, this._getTraversalMaps());
+					}
 					item.parentDomNode.insertBefore(item.next.domNode!, insertBefore);
-				} else {
-					item.parentDomNode.appendChild(item.next.domNode!);
 				}
-				const instanceData = widgetInstanceMap.get(item.parentWNodeWrapper!.instance)!;
+				const instanceData = widgetInstanceMap.get(item.parentWNodeWrapper!.instance!)!;
 				if (item.next.node.properties.key != null) {
 					instanceData.nodeHandler.add(item.next.domNode as HTMLElement, `${item.next.node.properties.key}`);
 				}
@@ -568,11 +577,16 @@ export class Renderer {
 	}
 
 	private _process(current: DomApplicatorInstruction): void;
-	private _process(current: DNodeWrapper[], next: DNodeWrapper[]): void;
-	private _process(current: DomApplicatorInstruction | DNodeWrapper[], next: DNodeWrapper[] = []): void {
+	private _process(current: DNodeWrapper[], next: DNodeWrapper[], mergeNodes?: any[]): void;
+	private _process(
+		current: DomApplicatorInstruction | DNodeWrapper[],
+		next: DNodeWrapper[] = [],
+		mergeNodes: any[] = []
+	): void {
 		if (isDomApplicatorInstruction(current)) {
 			this._queueDomInstruction(current);
 		} else {
+			console.log(mergeNodes);
 			const currentLength = current.length;
 			const nextLength = next.length;
 			let oldIndex = 0;
@@ -583,6 +597,33 @@ export class Renderer {
 				let currentWrapper = oldIndex < currentLength ? current[oldIndex] : undefined;
 				const nextWrapper = next[newIndex];
 				nextWrapper.hasPreviousSiblings = hasPreviousSiblings;
+
+				if (this._merge && mergeNodes) {
+					if (isVNodeWrapper(nextWrapper)) {
+						let domElement: Element | undefined = undefined;
+						let firstNode: any;
+						while (nextWrapper.domNode === undefined && mergeNodes.length > 0) {
+							domElement = mergeNodes.shift() as Element;
+							if (domElement === firstNode) {
+								break;
+							}
+							if (
+								domElement &&
+								domElement.tagName === (nextWrapper.node.tag.toUpperCase() || undefined)
+							) {
+								nextWrapper.domNode = domElement;
+							} else {
+								if (!firstNode) {
+									firstNode = domElement;
+								}
+								mergeNodes.push(domElement);
+							}
+						}
+					} else {
+						nextWrapper.mergeNodes = mergeNodes;
+					}
+				}
+
 				if (currentWrapper !== undefined && same(currentWrapper.node, nextWrapper.node)) {
 					oldIndex++;
 					newIndex++;
@@ -644,14 +685,18 @@ export class Renderer {
 						parentWNodeWrapper,
 						type: 'create'
 					};
+					let mergeNodes: any[] = [];
+					if (this._merge) {
+						mergeNodes = arrayFrom(next.domNode!.childNodes);
+					}
 					if (next.childrenWrappers) {
-						return [{ current: [], next: next.childrenWrappers }, domInstruction];
+						return [{ current: [], next: next.childrenWrappers, mergeNodes }, domInstruction];
 					}
 					return [domInstruction];
 				} else {
 					next = this._createWidget({ next }, this._getTraversalMaps(), this._registry);
 					next.instance && this._instanceToWrapperMap.set(next.instance, next);
-					return [{ current: [] as any, next: next.childrenWrappers || [] }];
+					return [{ current: [] as any, next: next.childrenWrappers || [], mergeNodes: next.mergeNodes }];
 				}
 			} else if (current && next) {
 				if (isVNodeWrapper(current) && isVNodeWrapper(next)) {
@@ -660,7 +705,7 @@ export class Renderer {
 					this._domNodeToWrapperMap.delete(current.domNode!);
 					this._domNodeToWrapperMap.set(next.domNode!, next);
 					const { parentWNodeWrapper } = findParentNodes(next.node, this._getTraversalMaps());
-					const instanceData = widgetInstanceMap.get(parentWNodeWrapper!.instance)!;
+					const instanceData = widgetInstanceMap.get(parentWNodeWrapper!.instance!)!;
 					if (next.node.properties.key != null) {
 						instanceData.nodeHandler.add(next.domNode as HTMLElement, `${next.node.properties.key}`);
 					}
@@ -764,11 +809,15 @@ export class Renderer {
 	}
 
 	private _createDom({ next }: CreateDomInstruction, traversalMaps: TraversalMaps): VNodeWrapper {
-		let domNode: Node | undefined;
-		if (next.node.tag) {
-			domNode = global.document.createElement(next.node.tag);
-		} else if (next.node.text != null) {
-			domNode = global.document.createTextNode(next.node.text);
+		let domNode = next.domNode;
+		if (!domNode) {
+			if (next.node.tag) {
+				domNode = global.document.createElement(next.node.tag);
+			} else if (next.node.text != null) {
+				domNode = global.document.createTextNode(next.node.text);
+			}
+		} else {
+			next.merged = true;
 		}
 		if (domNode) {
 			next.domNode = domNode;

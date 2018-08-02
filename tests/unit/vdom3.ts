@@ -1901,8 +1901,9 @@ describe('vdom', () => {
 						return w(Foo, {});
 					}
 				}
-				const widget = new Bar();
-				dom.merge(root, widget, { sync: true });
+				const r = renderer(() => w(Bar, {}));
+				r.sync = true;
+				r.append(iframe.contentDocument.body);
 				assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
 				assert.strictEqual(
 					root.childElementCount,
@@ -1992,8 +1993,9 @@ describe('vdom', () => {
 						return w(Foo, {});
 					}
 				}
-				const widget = new Bar();
-				dom.merge(root, widget, { sync: true });
+				const r = renderer(() => w(Bar, {}));
+				r.sync = true;
+				r.append(iframe.contentDocument.body);
 				assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
 				assert.strictEqual(
 					root.childElementCount,
@@ -2095,8 +2097,9 @@ describe('vdom', () => {
 						return w(Foo, {});
 					}
 				}
-				const widget = new Bar();
-				dom.merge(root, widget, { sync: true });
+				const r = renderer(() => w(Bar, {}));
+				r.sync = true;
+				r.append(iframe.contentDocument.body);
 				assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
 				assert.strictEqual(
 					root.childElementCount,
@@ -2137,8 +2140,14 @@ describe('vdom', () => {
 					}
 				}
 
+				let invalidate: any;
 				class Foo extends WidgetBase {
 					private _renderCount = 0;
+
+					constructor() {
+						super();
+						invalidate = this.invalidate.bind(this);
+					}
 
 					render() {
 						let nodes;
@@ -2151,10 +2160,11 @@ describe('vdom', () => {
 						return nodes;
 					}
 				}
-				const widget = new Foo();
-				dom.merge(root, widget, { sync: true });
+				const r = renderer(() => w(Foo, {}));
+				r.sync = true;
+				r.append(iframe.contentDocument.body);
 				assert.lengthOf(root.childNodes, 1);
-				widget.invalidate();
+				invalidate();
 				assert.strictEqual(root.childNodes.length, 3);
 				assert.strictEqual((root.childNodes[0].childNodes[0] as Text).data, 'Item 1');
 				assert.strictEqual((root.childNodes[1].childNodes[0] as Text).data, 'Item 2');
@@ -3755,7 +3765,7 @@ describe('vdom', () => {
 
 		it('Should ignore vnode with no tag or text', () => {
 			const domNode = document.createTextNode('text-node');
-			const textVNode: InternalVNode = {
+			const textVNode = {
 				tag: undefined as any,
 				properties: {},
 				children: undefined,
@@ -3767,7 +3777,6 @@ describe('vdom', () => {
 			const r = renderer(() => w(Widget, {}));
 			const div = document.createElement('div');
 			r.sync = true;
-			debugger;
 			r.append(div);
 			let textNode = div.childNodes[0] as Text;
 			assert.strictEqual(textNode, domNode);
@@ -3882,274 +3891,245 @@ describe('vdom', () => {
 	});
 
 	describe('merging', () => {
-		// it('Supports merging DNodes onto existing HTML', () => {
-		// 	const iframe = document.createElement('iframe');
-		// 	document.body.appendChild(iframe);
-		// 	iframe.contentDocument.write(
-		// 		`<div class="foo"><label for="baz">Select Me:</label><select type="text" name="baz" id="baz" disabled="disabled"><option value="foo">label foo</option><option value="bar" selected="">label bar</option><option value="baz">label baz</option></select><button type="button" disabled="disabled">Click Me!</button></div>`
-		// 	);
-		// 	iframe.contentDocument.close();
-		// 	const root = iframe.contentDocument.body.firstChild as HTMLElement;
-		// 	const childElementCount = root.childElementCount;
-		// 	const select = root.childNodes[1] as HTMLSelectElement;
-		// 	const button = root.childNodes[2] as HTMLButtonElement;
-		// 	assert.strictEqual(select.value, 'bar', 'bar should be selected');
-		// 	const onclickListener = spy();
-		// 	class Foo extends WidgetBase {
-		// 		render() {
-		// 			return v(
-		// 				'div',
-		// 				{
-		// 					classes: ['foo', 'bar']
-		// 				},
-		// 				[
-		// 					v(
-		// 						'label',
-		// 						{
-		// 							for: 'baz'
-		// 						},
-		// 						['Select Me:']
-		// 					),
-		// 					v(
-		// 						'select',
-		// 						{
-		// 							type: 'text',
-		// 							name: 'baz',
-		// 							id: 'baz',
-		// 							disabled: false
-		// 						},
-		// 						[
-		// 							v('option', { value: 'foo', selected: true }, ['label foo']),
-		// 							v('option', { value: 'bar', selected: false }, ['label bar']),
-		// 							v('option', { value: 'baz', selected: false }, ['label baz'])
-		// 						]
-		// 					),
-		// 					v(
-		// 						'button',
-		// 						{
-		// 							type: 'button',
-		// 							disabled: false,
-		// 							onclick: onclickListener
-		// 						},
-		// 						['Click Me!']
-		// 					)
-		// 				]
-		// 			);
-		// 		}
-		// 	}
-		// 	const widget = new Foo();
-		// 	dom.merge(root, widget);
-		// 	assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
-		// 	assert.strictEqual(root.childElementCount, childElementCount, 'should have the same number of children');
-		// 	assert.strictEqual(select, root.childNodes[1], 'should have been reused');
-		// 	assert.strictEqual(button, root.childNodes[2], 'should have been reused');
-		// 	assert.isFalse(select.disabled, 'select should be enabled');
-		// 	assert.isFalse(button.disabled, 'button should be enabled');
-		// 	assert.strictEqual(select.value, 'foo', 'foo should be selected');
-		// 	assert.strictEqual(select.children.length, 3, 'should have 3 children');
-		// 	assert.isFalse(onclickListener.called, 'onclickListener should not have been called');
-		// 	const clickEvent = document.createEvent('CustomEvent');
-		// 	clickEvent.initEvent('click', true, true);
-		// 	button.dispatchEvent(clickEvent);
-		// 	assert.isTrue(onclickListener.called, 'onclickListener should have been called');
-		// 	document.body.removeChild(iframe);
-		// });
-		// it('Supports merging DNodes with widgets onto existing HTML', () => {
-		// 	const iframe = document.createElement('iframe');
-		// 	document.body.appendChild(iframe);
-		// 	iframe.contentDocument.write(
-		// 		`<div class="foo"><label for="baz">Select Me:</label><select type="text" name="baz" id="baz" disabled="disabled"><option value="foo">label foo</option><option value="bar" selected="">label bar</option><option value="baz">label baz</option></select><button type="button" disabled="disabled">Click Me!</button><span>label</span><div>last node</div></div>`
-		// 	);
-		// 	iframe.contentDocument.close();
-		// 	const root = iframe.contentDocument.body.firstChild as HTMLElement;
-		// 	const childElementCount = root.childElementCount;
-		// 	const label = root.childNodes[0] as HTMLLabelElement;
-		// 	const select = root.childNodes[1] as HTMLSelectElement;
-		// 	const button = root.childNodes[2] as HTMLButtonElement;
-		// 	const span = root.childNodes[3] as HTMLElement;
-		// 	const div = root.childNodes[4] as HTMLElement;
-		// 	assert.strictEqual(select.value, 'bar', 'bar should be selected');
-		// 	const onclickListener = spy();
-		// 	class Button extends WidgetBase {
-		// 		render() {
-		// 			return [
-		// 				v('button', { type: 'button', disabled: false, onclick: onclickListener }, ['Click Me!']),
-		// 				v('span', {}, ['label'])
-		// 			];
-		// 		}
-		// 	}
-		// 	class Foo extends WidgetBase {
-		// 		render() {
-		// 			return v(
-		// 				'div',
-		// 				{
-		// 					classes: ['foo', 'bar']
-		// 				},
-		// 				[
-		// 					v(
-		// 						'label',
-		// 						{
-		// 							for: 'baz'
-		// 						},
-		// 						['Select Me:']
-		// 					),
-		// 					v(
-		// 						'select',
-		// 						{
-		// 							type: 'text',
-		// 							name: 'baz',
-		// 							id: 'baz',
-		// 							disabled: false
-		// 						},
-		// 						[
-		// 							v('option', { value: 'foo', selected: true }, ['label foo']),
-		// 							v('option', { value: 'bar', selected: false }, ['label bar']),
-		// 							v('option', { value: 'baz', selected: false }, ['label baz'])
-		// 						]
-		// 					),
-		// 					w(Button, {}),
-		// 					v('div', ['last node'])
-		// 				]
-		// 			);
-		// 		}
-		// 	}
-		// 	const widget = new Foo();
-		// 	dom.merge(root, widget);
-		// 	assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
-		// 	assert.strictEqual(root.childElementCount, childElementCount, 'should have the same number of children');
-		// 	assert.strictEqual(label, root.childNodes[0], 'should have been reused');
-		// 	assert.strictEqual(select, root.childNodes[1], 'should have been reused');
-		// 	assert.strictEqual(button, root.childNodes[2], 'should have been reused');
-		// 	assert.strictEqual(span, root.childNodes[3], 'should have been reused');
-		// 	assert.strictEqual(div, root.childNodes[4], 'should have been reused');
-		// 	assert.isFalse(select.disabled, 'select should be enabled');
-		// 	assert.isFalse(button.disabled, 'button should be enabled');
-		// 	assert.strictEqual(select.value, 'foo', 'foo should be selected');
-		// 	assert.strictEqual(select.children.length, 3, 'should have 3 children');
-		// 	assert.isFalse(onclickListener.called, 'onclickListener should not have been called');
-		// 	const clickEvent = document.createEvent('CustomEvent');
-		// 	clickEvent.initEvent('click', true, true);
-		// 	button.dispatchEvent(clickEvent);
-		// 	assert.isTrue(onclickListener.called, 'onclickListener should have been called');
-		// 	document.body.removeChild(iframe);
-		// });
-		// it('Skips unknown nodes when merging', () => {
-		// 	const iframe = document.createElement('iframe');
-		// 	document.body.appendChild(iframe);
-		// 	iframe.contentDocument.write(`
-		// 			<div class="foo">
-		// 				<label for="baz">Select Me:</label>
-		// 				<select type="text" name="baz" id="baz" disabled="disabled">
-		// 					<option value="foo">label foo</option>
-		// 					<option value="bar" selected="">label bar</option>
-		// 					<option value="baz">label baz</option>
-		// 				</select>
-		// 				<button type="button" disabled="disabled">Click Me!</button>
-		// 				<span>label</span>
-		// 				<div>last node</div>
-		// 			</div>`);
-		// 	iframe.contentDocument.close();
-		// 	const root = iframe.contentDocument.body.firstChild as HTMLElement;
-		// 	const childElementCount = root.childElementCount;
-		// 	const label = root.childNodes[1] as HTMLLabelElement;
-		// 	const select = root.childNodes[3] as HTMLSelectElement;
-		// 	const button = root.childNodes[5] as HTMLButtonElement;
-		// 	const span = root.childNodes[7] as HTMLElement;
-		// 	const div = root.childNodes[9] as HTMLElement;
-		// 	assert.strictEqual(select.value, 'bar', 'bar should be selected');
-		// 	const onclickListener = spy();
-		// 	class Button extends WidgetBase {
-		// 		render() {
-		// 			return [
-		// 				v('button', { type: 'button', disabled: false, onclick: onclickListener }, ['Click Me!']),
-		// 				v('span', {}, ['label'])
-		// 			];
-		// 		}
-		// 	}
-		// 	class Foo extends WidgetBase {
-		// 		render() {
-		// 			return v(
-		// 				'div',
-		// 				{
-		// 					classes: ['foo', 'bar']
-		// 				},
-		// 				[
-		// 					v(
-		// 						'label',
-		// 						{
-		// 							for: 'baz'
-		// 						},
-		// 						['Select Me:']
-		// 					),
-		// 					v(
-		// 						'select',
-		// 						{
-		// 							type: 'text',
-		// 							name: 'baz',
-		// 							id: 'baz',
-		// 							disabled: false
-		// 						},
-		// 						[
-		// 							v('option', { value: 'foo', selected: true }, ['label foo']),
-		// 							v('option', { value: 'bar', selected: false }, ['label bar']),
-		// 							v('option', { value: 'baz', selected: false }, ['label baz'])
-		// 						]
-		// 					),
-		// 					w(Button, {}),
-		// 					v('div', ['last node'])
-		// 				]
-		// 			);
-		// 		}
-		// 	}
-		// 	const widget = new Foo();
-		// 	dom.merge(root, widget);
-		// 	assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
-		// 	assert.strictEqual(root.childElementCount, childElementCount, 'should have the same number of children');
-		// 	assert.strictEqual(label, root.childNodes[1], 'should have been reused');
-		// 	assert.strictEqual(select, root.childNodes[3], 'should have been reused');
-		// 	assert.strictEqual(button, root.childNodes[5], 'should have been reused');
-		// 	assert.strictEqual(span, root.childNodes[7], 'should have been reused');
-		// 	assert.strictEqual(div, root.childNodes[9], 'should have been reused');
-		// 	assert.isFalse(select.disabled, 'select should be enabled');
-		// 	assert.isFalse(button.disabled, 'button should be enabled');
-		// 	assert.strictEqual(select.value, 'foo', 'foo should be selected');
-		// 	assert.strictEqual(select.children.length, 3, 'should have 3 children');
-		// 	assert.isFalse(onclickListener.called, 'onclickListener should not have been called');
-		// 	const clickEvent = document.createEvent('CustomEvent');
-		// 	clickEvent.initEvent('click', true, true);
-		// 	button.dispatchEvent(clickEvent);
-		// 	assert.isTrue(onclickListener.called, 'onclickListener should have been called');
-		// 	document.body.removeChild(iframe);
-		// });
-		// it('should only merge on first render', () => {
-		// 	let firstRender = true;
-		// 	const iframe = document.createElement('iframe');
-		// 	document.body.appendChild(iframe);
-		// 	iframe.contentDocument.write('<div><div>foo</div></div>');
-		// 	iframe.contentDocument.close();
-		// 	const root = iframe.contentDocument.body.firstChild as HTMLElement;
-		// 	class Bar extends WidgetBase<any> {
-		// 		render() {
-		// 			return v('div', [this.properties.value]);
-		// 		}
-		// 	}
-		// 	class Foo extends WidgetBase {
-		// 		render() {
-		// 			return v('div', [
-		// 				w(Bar, { key: '1', value: 'foo' }),
-		// 				firstRender ? null : w(Bar, { key: '2', value: 'bar' })
-		// 			]);
-		// 		}
-		// 	}
-		// 	const widget = new Foo();
-		// 	const projection = dom.merge(root, widget, { sync: true });
-		// 	const projectionRoot = projection.domNode.childNodes[0] as Element;
-		// 	assert.lengthOf(projectionRoot.childNodes, 1, 'should have 1 child');
-		// 	firstRender = false;
-		// 	widget.invalidate();
-		// 	assert.lengthOf(projectionRoot.childNodes, 2, 'should have 2 child');
-		// 	document.body.removeChild(iframe);
-		// });
+		it('Supports merging DNodes onto existing HTML', () => {
+			const iframe = document.createElement('iframe');
+			document.body.appendChild(iframe);
+			iframe.contentDocument.write(
+				`<div class="foo"><label for="baz">Select Me:</label><select type="text" name="baz" id="baz" disabled="disabled"><option value="foo">label foo</option><option value="bar" selected="">label bar</option><option value="baz">label baz</option></select><button type="button" disabled="disabled">Click Me!</button></div>`
+			);
+			iframe.contentDocument.close();
+			const root = iframe.contentDocument.body.firstChild as HTMLElement;
+			const childElementCount = root.childElementCount;
+			const select = root.childNodes[1] as HTMLSelectElement;
+			const button = root.childNodes[2] as HTMLButtonElement;
+			assert.strictEqual(select.value, 'bar', 'bar should be selected');
+			const onclickListener = spy();
+			class Foo extends WidgetBase {
+				render() {
+					return v(
+						'div',
+						{
+							classes: ['foo', 'bar']
+						},
+						[
+							v(
+								'label',
+								{
+									for: 'baz'
+								},
+								['Select Me:']
+							),
+							v(
+								'select',
+								{
+									type: 'text',
+									name: 'baz',
+									id: 'baz',
+									disabled: false
+								},
+								[
+									v('option', { value: 'foo', selected: true }, ['label foo']),
+									v('option', { value: 'bar', selected: false }, ['label bar']),
+									v('option', { value: 'baz', selected: false }, ['label baz'])
+								]
+							),
+							v(
+								'button',
+								{
+									type: 'button',
+									disabled: false,
+									onclick: onclickListener
+								},
+								['Click Me!']
+							)
+						]
+					);
+				}
+			}
+			const r = renderer(() => w(Foo, {}));
+			r.append(iframe.contentDocument.body);
+			assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
+			assert.strictEqual(root.childElementCount, childElementCount, 'should have the same number of children');
+			assert.strictEqual(select, root.childNodes[1], 'should have been reused');
+			assert.strictEqual(button, root.childNodes[2], 'should have been reused');
+			assert.isFalse(select.disabled, 'select should be enabled');
+			assert.isFalse(button.disabled, 'button should be enabled');
+			assert.strictEqual(select.value, 'foo', 'foo should be selected');
+			assert.strictEqual(select.children.length, 3, 'should have 3 children');
+			assert.isFalse(onclickListener.called, 'onclickListener should not have been called');
+			const clickEvent = document.createEvent('CustomEvent');
+			clickEvent.initEvent('click', true, true);
+			button.dispatchEvent(clickEvent);
+			assert.isTrue(onclickListener.called, 'onclickListener should have been called');
+			document.body.removeChild(iframe);
+		});
+		it('Supports merging DNodes with widgets onto existing HTML', () => {
+			const iframe = document.createElement('iframe');
+			document.body.appendChild(iframe);
+			iframe.contentDocument.write(
+				`<div class="foo"><label for="baz">Select Me:</label><select type="text" name="baz" id="baz" disabled="disabled"><option value="foo">label foo</option><option value="bar" selected="">label bar</option><option value="baz">label baz</option></select><button type="button" disabled="disabled">Click Me!</button><span>label</span><div>last node</div></div>`
+			);
+			iframe.contentDocument.close();
+			const root = iframe.contentDocument.body.firstChild as HTMLElement;
+			const childElementCount = root.childElementCount;
+			const label = root.childNodes[0] as HTMLLabelElement;
+			const select = root.childNodes[1] as HTMLSelectElement;
+			const button = root.childNodes[2] as HTMLButtonElement;
+			const span = root.childNodes[3] as HTMLElement;
+			const div = root.childNodes[4] as HTMLElement;
+			assert.strictEqual(select.value, 'bar', 'bar should be selected');
+			const onclickListener = spy();
+			class Button extends WidgetBase {
+				render() {
+					return [
+						v('button', { type: 'button', disabled: false, onclick: onclickListener }, ['Click Me!']),
+						v('span', {}, ['label'])
+					];
+				}
+			}
+			class Foo extends WidgetBase {
+				render() {
+					return v(
+						'div',
+						{
+							classes: ['foo', 'bar']
+						},
+						[
+							v(
+								'label',
+								{
+									for: 'baz'
+								},
+								['Select Me:']
+							),
+							v(
+								'select',
+								{
+									type: 'text',
+									name: 'baz',
+									id: 'baz',
+									disabled: false
+								},
+								[
+									v('option', { value: 'foo', selected: true }, ['label foo']),
+									v('option', { value: 'bar', selected: false }, ['label bar']),
+									v('option', { value: 'baz', selected: false }, ['label baz'])
+								]
+							),
+							w(Button, {}),
+							v('div', ['last node'])
+						]
+					);
+				}
+			}
+			const r = renderer(() => w(Foo, {}));
+			r.append(iframe.contentDocument.body);
+			assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
+			assert.strictEqual(root.childElementCount, childElementCount, 'should have the same number of children');
+			assert.strictEqual(label, root.childNodes[0], 'should have been reused');
+			assert.strictEqual(select, root.childNodes[1], 'should have been reused');
+			assert.strictEqual(button, root.childNodes[2], 'should have been reused');
+			assert.strictEqual(span, root.childNodes[3], 'should have been reused');
+			assert.strictEqual(div, root.childNodes[4], 'should have been reused');
+			assert.isFalse(select.disabled, 'select should be enabled');
+			assert.isFalse(button.disabled, 'button should be enabled');
+			assert.strictEqual(select.value, 'foo', 'foo should be selected');
+			assert.strictEqual(select.children.length, 3, 'should have 3 children');
+			assert.isFalse(onclickListener.called, 'onclickListener should not have been called');
+			const clickEvent = document.createEvent('CustomEvent');
+			clickEvent.initEvent('click', true, true);
+			button.dispatchEvent(clickEvent);
+			assert.isTrue(onclickListener.called, 'onclickListener should have been called');
+			document.body.removeChild(iframe);
+		});
+		it('Skips unknown nodes when merging', () => {
+			const iframe = document.createElement('iframe');
+			document.body.appendChild(iframe);
+			iframe.contentDocument.write(`
+					<div class="foo">
+						<label for="baz">Select Me:</label>
+						<select type="text" name="baz" id="baz" disabled="disabled">
+							<option value="foo">label foo</option>
+							<option value="bar" selected="">label bar</option>
+							<option value="baz">label baz</option>
+						</select>
+						<button type="button" disabled="disabled">Click Me!</button>
+						<span>label</span>
+						<div>last node</div>
+					</div>`);
+			iframe.contentDocument.close();
+			const root = iframe.contentDocument.body.firstChild as HTMLElement;
+			const childElementCount = root.childElementCount;
+			const label = root.childNodes[1] as HTMLLabelElement;
+			const select = root.childNodes[3] as HTMLSelectElement;
+			const button = root.childNodes[5] as HTMLButtonElement;
+			const span = root.childNodes[7] as HTMLElement;
+			const div = root.childNodes[9] as HTMLElement;
+			assert.strictEqual(select.value, 'bar', 'bar should be selected');
+			const onclickListener = spy();
+			class Button extends WidgetBase {
+				render() {
+					return [
+						v('button', { type: 'button', disabled: false, onclick: onclickListener }, ['Click Me!']),
+						v('span', {}, ['label'])
+					];
+				}
+			}
+			class Foo extends WidgetBase {
+				render() {
+					return v(
+						'div',
+						{
+							classes: ['foo', 'bar']
+						},
+						[
+							v(
+								'label',
+								{
+									for: 'baz'
+								},
+								['Select Me:']
+							),
+							v(
+								'select',
+								{
+									type: 'text',
+									name: 'baz',
+									id: 'baz',
+									disabled: false
+								},
+								[
+									v('option', { value: 'foo', selected: true }, ['label foo']),
+									v('option', { value: 'bar', selected: false }, ['label bar']),
+									v('option', { value: 'baz', selected: false }, ['label baz'])
+								]
+							),
+							w(Button, {}),
+							v('div', ['last node'])
+						]
+					);
+				}
+			}
+			const r = renderer(() => w(Foo, {}));
+			r.append(iframe.contentDocument.body);
+			assert.strictEqual(root.className, 'foo bar', 'should have added bar class');
+			assert.strictEqual(root.childElementCount, childElementCount, 'should have the same number of children');
+			assert.strictEqual(label, root.childNodes[1], 'should have been reused');
+			assert.strictEqual(select, root.childNodes[3], 'should have been reused');
+			assert.strictEqual(button, root.childNodes[5], 'should have been reused');
+			assert.strictEqual(span, root.childNodes[7], 'should have been reused');
+			assert.strictEqual(div, root.childNodes[9], 'should have been reused');
+			assert.isFalse(select.disabled, 'select should be enabled');
+			assert.isFalse(button.disabled, 'button should be enabled');
+			assert.strictEqual(select.value, 'foo', 'foo should be selected');
+			assert.strictEqual(select.children.length, 3, 'should have 3 children');
+			assert.isFalse(onclickListener.called, 'onclickListener should not have been called');
+			const clickEvent = document.createEvent('CustomEvent');
+			clickEvent.initEvent('click', true, true);
+			button.dispatchEvent(clickEvent);
+			assert.isTrue(onclickListener.called, 'onclickListener should have been called');
+			document.body.removeChild(iframe);
+		});
 	});
 
 	describe('sync mode', () => {

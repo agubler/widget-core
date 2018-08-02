@@ -101,6 +101,12 @@ export interface DomOptions {
 	diffType?: DiffType;
 }
 
+export interface VDomOptions {
+	props?: VNodeProperties;
+	attrs?: { [index: string]: string | undefined };
+	on?: On;
+}
+
 export interface VNodeProperties {
 	/**
 	 * The animation to perform when this node is added to an already existing parent.
@@ -300,7 +306,7 @@ export interface VNode {
 	/**
 	 * VNode attributes
 	 */
-	attributes?: { [index: string]: string };
+	attributes?: { [index: string]: string | undefined };
 
 	/**
 	 * VNode events
@@ -333,6 +339,10 @@ export interface VNode {
 	diffType?: DiffType;
 
 	bind?: WidgetBaseInterface;
+}
+
+export interface DomVNode extends VNode {
+	domNode: Text | Element;
 }
 
 /**
