@@ -1,6 +1,6 @@
 const { afterEach, beforeEach, describe, it } = intern.getInterface('bdd');
 const { assert } = intern.getPlugin('chai');
-import { stub, SinonStub, SinonSpy } from 'sinon';
+import { spy, stub, SinonStub, SinonSpy } from 'sinon';
 import { createResolvers } from './../support/util';
 
 import { renderer, widgetInstanceMap } from '../../src/vdom4';
@@ -3125,10 +3125,8 @@ describe('vdom', () => {
 			assert.lengthOf(root.childNodes, 3);
 			const firstSpan = root.childNodes[0];
 			const lastSpan = root.childNodes[2];
-			debugger;
 			meta.setRenderResult(v('div', [v('span', { key: 1 }), v('span', { key: 3 })]));
 			assert.lengthOf(root.childNodes, 2);
-			debugger;
 			assert.strictEqual(root.childNodes[0], firstSpan);
 			assert.strictEqual(root.childNodes[1], lastSpan);
 			meta.setRenderResult(v('div', [v('span', { key: 3 })]));
@@ -3331,7 +3329,6 @@ describe('vdom', () => {
 			const childTen = root.childNodes[9] as HTMLSpanElement;
 			const childEleven = root.childNodes[10] as HTMLSpanElement;
 			const childTwelve = root.childNodes[11] as HTMLSpanElement;
-
 			meta.setRenderResult(
 				v('div', [
 					v('span', { key: '1', id: '1' }),
@@ -3770,6 +3767,7 @@ describe('vdom', () => {
 			const r = renderer(() => w(Widget, {}));
 			const div = document.createElement('div');
 			r.sync = true;
+			debugger;
 			r.append(div);
 			let textNode = div.childNodes[0] as Text;
 			assert.strictEqual(textNode, domNode);
@@ -4427,8 +4425,10 @@ describe('vdom', () => {
 					focus: true
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const focusSpy = spy(input, 'focus');
 			resolvers.resolve();
 			assert.isTrue(focusSpy.calledOnce);
@@ -4443,8 +4443,9 @@ describe('vdom', () => {
 					focus: false
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const focusSpy = spy(input, 'focus');
 			resolvers.resolve();
 			assert.isTrue(focusSpy.notCalled);
@@ -4463,8 +4464,9 @@ describe('vdom', () => {
 					focus: shouldFocus
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const focusSpy = spy(input, 'focus');
 			resolvers.resolve();
 			assert.isTrue(focusSpy.calledOnce);
@@ -4481,8 +4483,9 @@ describe('vdom', () => {
 					focus: shouldFocus
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const focusSpy = spy(input, 'focus');
 			resolvers.resolve();
 			assert.isTrue(focusSpy.notCalled);
@@ -4500,8 +4503,9 @@ describe('vdom', () => {
 					blur: true
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const blurSpy = spy(input, 'blur');
 			resolvers.resolve();
 			assert.isTrue(blurSpy.calledOnce);
@@ -4516,8 +4520,9 @@ describe('vdom', () => {
 					blur: false
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const blurSpy = spy(input, 'blur');
 			resolvers.resolve();
 			assert.isTrue(blurSpy.notCalled);
@@ -4536,8 +4541,9 @@ describe('vdom', () => {
 					blur: shouldBlur
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const blurSpy = spy(input, 'blur');
 			resolvers.resolve();
 			assert.isTrue(blurSpy.calledOnce);
@@ -4554,8 +4560,9 @@ describe('vdom', () => {
 					blur: shouldBlur
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const blurSpy = spy(input, 'blur');
 			resolvers.resolve();
 			assert.isTrue(blurSpy.notCalled);
@@ -4573,8 +4580,9 @@ describe('vdom', () => {
 					scrollIntoView: true
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const scrollIntoViewStub = stub();
 			input.scrollIntoView = scrollIntoViewStub;
 			resolvers.resolve();
@@ -4590,8 +4598,9 @@ describe('vdom', () => {
 					scrollIntoView: false
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const scrollIntoViewStub = stub();
 			input.scrollIntoView = scrollIntoViewStub;
 			resolvers.resolve();
@@ -4611,8 +4620,9 @@ describe('vdom', () => {
 					scrollIntoView: shouldScroll
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const scrollIntoViewStub = stub();
 			input.scrollIntoView = scrollIntoViewStub;
 			resolvers.resolve();
@@ -4625,13 +4635,14 @@ describe('vdom', () => {
 
 		it('Should never scrollIntoView if function for scrollIntoView returns false', () => {
 			const shouldScroll = () => false;
-			const widget = getWidget(
+			const [Widget, meta] = getWidget(
 				v('input', {
 					scrollIntoView: shouldScroll
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const scrollIntoViewStub = stub();
 			input.scrollIntoView = scrollIntoViewStub;
 			resolvers.resolve();
@@ -4645,13 +4656,14 @@ describe('vdom', () => {
 
 	describe('click', () => {
 		it('click is only called once when set to true', () => {
-			const widget = getWidget(
+			const [Widget, meta] = getWidget(
 				v('input', {
 					click: true
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const clickSpy = spy(input, 'click');
 			resolvers.resolve();
 			assert.isTrue(clickSpy.calledOnce);
@@ -4661,13 +4673,14 @@ describe('vdom', () => {
 		});
 
 		it('click is called when click property is set to true from false', () => {
-			const widget = getWidget(
+			const [Widget, meta] = getWidget(
 				v('input', {
 					click: false
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const clickSpy = spy(input, 'click');
 			resolvers.resolve();
 			assert.isTrue(clickSpy.notCalled);
@@ -4681,13 +4694,14 @@ describe('vdom', () => {
 			const shouldClick = () => {
 				return true;
 			};
-			const widget = getWidget(
+			const [Widget, meta] = getWidget(
 				v('input', {
 					click: shouldClick
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const clickSpy = spy(input, 'click');
 			resolvers.resolve();
 			assert.isTrue(clickSpy.calledOnce);
@@ -4699,13 +4713,14 @@ describe('vdom', () => {
 
 		it('Should never click if function for click returns false', () => {
 			const shouldClick = () => false;
-			const widget = getWidget(
+			const [Widget, meta] = getWidget(
 				v('input', {
 					click: shouldClick
 				})
 			);
-			const projection = dom.append(document.body, widget);
-			const input = projection.domNode.lastChild as HTMLElement;
+			const r = renderer(() => w(Widget, {}));
+			r.append();
+			const input = document.body.lastChild as HTMLElement;
 			const clickSpy = spy(input, 'click');
 			resolvers.resolve();
 			assert.isTrue(clickSpy.notCalled);
@@ -4717,18 +4732,25 @@ describe('vdom', () => {
 	});
 
 	it('i18n Mixin', () => {
+		let setProperties: any;
 		class MyWidget extends I18nMixin(WidgetBase) {
+			constructor() {
+				super();
+				setProperties = this.__setProperties__.bind(this);
+			}
 			render() {
 				return v('span');
 			}
 		}
-		const widget = new MyWidget();
-		const projection = dom.create(widget, { sync: true });
-		const root = projection.domNode.childNodes[0] as HTMLElement;
+		const r = renderer(() => w(MyWidget, {}));
+		r.sync = true;
+		const div = document.createElement('div');
+		r.append(div);
+		const root = div.childNodes[0] as HTMLElement;
 		assert.strictEqual(root.dir, '');
-		widget.__setProperties__({ rtl: true });
+		setProperties({ rtl: true });
 		assert.strictEqual(root.dir, 'rtl');
-		widget.__setProperties__({ rtl: false });
+		setProperties({ rtl: false });
 		assert.strictEqual(root.dir, 'ltr');
 	});
 	// });

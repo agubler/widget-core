@@ -103,7 +103,6 @@ export interface CreateDomApplication {
 	type: 'create';
 	current?: VNodeWrapper;
 	next: VNodeWrapper;
-	insertBefore: Node | null;
 	parentWNodeWrapper?: WNodeWrapper;
 	parentDomNode: Node;
 }
@@ -116,6 +115,7 @@ export interface DeleteDomApplication {
 export type DomApplicatorInstruction = CreateDomApplication | DeleteDomApplication;
 
 export const widgetInstanceMap = new WeakMap<any, WidgetData>();
+
 const nodeOperations = ['focus', 'blur', 'scrollIntoView', 'click'];
 
 function isWNodeWrapper(child: DNodeWrapper): child is WNodeWrapper {
@@ -143,7 +143,9 @@ function nodeOperation(
 		result = propValue && !previousValue;
 	}
 	if (result === true) {
-		domNode[propName]();
+		global.requestAnimationFrame(() => {
+			domNode[propName]();
+		});
 	}
 }
 
@@ -203,7 +205,6 @@ function renderedToWrapper(
 	for (let i = 0; i < rendered.length; i++) {
 		let renderedItem = rendered[i];
 		const hasParentWNode = isWNodeWrapper(parent);
-		// URGH
 		let findInsertBefore = false;
 		const currentParentLength = isVNodeWrapper(currentParent) && (currentParent.childrenWrappers || []).length > 1;
 		if ((parent.hasPreviousSiblings !== false && hasParentWNode) || currentParentLength) {
@@ -244,32 +245,6 @@ function findParentNodes(currentNode: VNode | WNode, { parent }: TraversalMaps):
 	return { parentDomNode, parentWNodeWrapper };
 }
 
-// function findInsertBefore(next: DNodeWrapper, { sibling, parent }: TraversalMaps): Node | null {
-// 	let insertBefore: Node | null = null;
-// 	while (!insertBefore) {
-// 		const nextSibling = sibling.get(next);
-// 		if (nextSibling) {
-// 			if (isVNodeWrapper(nextSibling)) {
-// 				if (nextSibling.domNode && nextSibling.domNode.parentNode) {
-// 					insertBefore = nextSibling.domNode;
-// 				}
-// 				break;
-// 			} else if (isWNodeWrapper(nextSibling)) {
-// 				if (nextSibling.domNode && nextSibling.domNode.parentNode) {
-// 					insertBefore = nextSibling.domNode;
-// 				}
-// 				next = nextSibling;
-// 			}
-// 		} else {
-// 			next = parent.get(next.node)!;
-// 			if (!next || isVNodeWrapper(next)) {
-// 				break;
-// 			}
-// 		}
-// 	}
-// 	return insertBefore;
-// }
-
 function same(dnode1: DNode, dnode2: DNode): boolean {
 	if (isVNode(dnode1) && isVNode(dnode2)) {
 		if (dnode1.tag !== dnode2.tag) {
@@ -301,6 +276,35 @@ function findIndexOfChild(children: DNodeWrapper[], sameAs: DNode, start: number
 		}
 	}
 	return -1;
+}
+
+function findInsertBefore(next: VNodeWrapper, { sibling, parent }: TraversalMaps) {
+	let insertBefore: Node | null = null;
+	let searchNode: DNodeWrapper = next;
+	while (!insertBefore) {
+		const nextSibling = sibling.get(searchNode);
+		if (nextSibling) {
+			if (isVNodeWrapper(nextSibling)) {
+				if (nextSibling.domNode && nextSibling.domNode.parentNode) {
+					insertBefore = nextSibling.domNode;
+					break;
+				}
+				searchNode = nextSibling;
+			} else if (isWNodeWrapper(nextSibling)) {
+				if (nextSibling.domNode && nextSibling.domNode.parentNode) {
+					insertBefore = nextSibling.domNode;
+					break;
+				}
+				searchNode = nextSibling;
+			}
+		} else {
+			searchNode = parent.get(searchNode.node)!;
+			if (!searchNode || isVNodeWrapper(searchNode)) {
+				break;
+			}
+		}
+	}
+	return insertBefore;
 }
 
 function addClasses(domNode: Element, classes: SupportedClassName) {
@@ -440,6 +444,7 @@ export class Renderer {
 	private _domNodeToWrapperMap = new WeakMap<Node, VNodeWrapper>();
 	private _wrapperSiblingMap = new WeakMap<DNodeWrapper, DNodeWrapper>();
 	private _renderScheduled: number | undefined;
+	private _merge = false;
 
 	constructor(renderer: () => WNode) {
 		this._renderer = renderer;
@@ -451,6 +456,10 @@ export class Renderer {
 
 	public set registry(registry: Registry) {
 		this._registry = registry;
+	}
+
+	public set merge(merge: boolean) {
+		this._merge = merge;
 	}
 
 	public append(node?: HTMLElement): void {
@@ -506,8 +515,12 @@ export class Renderer {
 			const item = this._domInstructionQueue.pop()!;
 			if (item.type === 'create') {
 				setProperties(item.next!.domNode as HTMLElement, undefined, item.next.node, this._eventMap);
-				if (item.insertBefore) {
-					item.parentDomNode.insertBefore(item.next.domNode!, item.insertBefore);
+				let insertBefore: any;
+				if (item.next.findInsertBefore) {
+					insertBefore = findInsertBefore(item.next, this._getTraversalMaps());
+				}
+				if (insertBefore) {
+					item.parentDomNode.insertBefore(item.next.domNode!, insertBefore);
 				} else {
 					item.parentDomNode.appendChild(item.next.domNode!);
 				}
@@ -560,27 +573,42 @@ export class Renderer {
 		if (isDomApplicatorInstruction(current)) {
 			this._queueDomInstruction(current);
 		} else {
+			const currentLength = current.length;
+			const nextLength = next.length;
+			let oldIndex = 0;
+			let newIndex = 0;
 			const hasPreviousSiblings = current.length > 1;
 			const instructions: Instruction[] = [];
-			const foundIndexes: number[] = [];
-			for (let i = 0; i < next.length; i++) {
-				const nextWrapper = next[i];
+			while (newIndex < nextLength) {
+				let currentWrapper = oldIndex < currentLength ? current[oldIndex] : undefined;
+				const nextWrapper = next[newIndex];
 				nextWrapper.hasPreviousSiblings = hasPreviousSiblings;
-				const oldIndex = findIndexOfChild(current, nextWrapper.node, i);
-				if (oldIndex === -1) {
-					instructions.push({ current: undefined, next: nextWrapper });
-				} else if (oldIndex === i) {
-					foundIndexes.push(oldIndex);
-					instructions.push({ current: current[oldIndex], next: nextWrapper });
-				} else {
-					foundIndexes.push(oldIndex);
-					instructions.push({ current: current[oldIndex], next: undefined });
-					instructions.push({ current: undefined, next: nextWrapper });
+				if (currentWrapper !== undefined && same(currentWrapper.node, nextWrapper.node)) {
+					oldIndex++;
+					newIndex++;
+					instructions.push({ current: currentWrapper, next: nextWrapper });
+					continue;
 				}
-			}
+				const findOldIndex = findIndexOfChild(current, nextWrapper.node, oldIndex + 1);
+				if (!currentWrapper || findOldIndex === -1) {
+					newIndex++;
+					instructions.push({ current: undefined, next: nextWrapper });
+					continue;
+				}
+				const findNewIndex = findIndexOfChild(next, currentWrapper.node, newIndex + 1);
+				if (findNewIndex === -1) {
+					instructions.push({ current: currentWrapper, next: undefined });
+					oldIndex++;
+					continue;
+				}
 
-			for (let i = 0; i < current.length; i++) {
-				if (foundIndexes.indexOf(i) === -1) {
+				instructions.push({ current: currentWrapper, next: undefined });
+				instructions.push({ current: undefined, next: nextWrapper });
+				oldIndex++;
+				newIndex++;
+			}
+			if (currentLength > oldIndex) {
+				for (let i = oldIndex; i < currentLength; i++) {
 					instructions.push({ current: current[i], next: undefined });
 				}
 			}
@@ -610,38 +638,10 @@ export class Renderer {
 							parentWNodeWrapper.domNode = next.domNode;
 						}
 					}
-					// console.log(next.node.tag, 'insert before', next.findInsertBefore, 'has parent wnode', next.hasParentWNode, 'has previous siblings', next.hasPreviousSiblings);
-					let insertBefore: Node | null = null;
-					if (next.findInsertBefore) {
-						let searchNode: DNodeWrapper = next;
-						while (!insertBefore) {
-							const nextSibling = this._wrapperSiblingMap.get(searchNode);
-							if (nextSibling) {
-								if (isVNodeWrapper(nextSibling)) {
-									if (nextSibling.domNode && nextSibling.domNode.parentNode) {
-										insertBefore = nextSibling.domNode;
-									}
-									break;
-								} else if (isWNodeWrapper(nextSibling)) {
-									if (nextSibling.domNode && nextSibling.domNode.parentNode) {
-										insertBefore = nextSibling.domNode;
-									}
-									searchNode = nextSibling;
-								}
-							} else {
-								searchNode = this._dnodeToParentWrapperMap.get(searchNode.node)!;
-								if (!searchNode || isVNodeWrapper(searchNode)) {
-									break;
-								}
-							}
-						}
-					}
-
 					const domInstruction: DomApplicatorInstruction = {
 						next: next!,
 						parentDomNode: parentDomNode!,
 						parentWNodeWrapper,
-						insertBefore,
 						type: 'create'
 					};
 					if (next.childrenWrappers) {
@@ -659,15 +659,12 @@ export class Renderer {
 					this._updateDom({ current, next }, this._getTraversalMaps());
 					this._domNodeToWrapperMap.delete(current.domNode!);
 					this._domNodeToWrapperMap.set(next.domNode!, next);
-					current.childrenWrappers;
-					if (next.childrenWrappers) {
-						return [{ current: current.childrenWrappers || [], next: next.childrenWrappers }];
-					}
 					const { parentWNodeWrapper } = findParentNodes(next.node, this._getTraversalMaps());
 					const instanceData = widgetInstanceMap.get(parentWNodeWrapper!.instance)!;
 					if (next.node.properties.key != null) {
 						instanceData.nodeHandler.add(next.domNode as HTMLElement, `${next.node.properties.key}`);
 					}
+					return [{ current: current.childrenWrappers || [], next: next.childrenWrappers || [] }];
 				} else if (isWNodeWrapper(current) && isWNodeWrapper(next)) {
 					current = this._instanceToWrapperMap.get(current.instance!)!;
 					next = this._updateWidget({ current, next }, this._getTraversalMaps());
