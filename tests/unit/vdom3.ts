@@ -1,6 +1,6 @@
 const { afterEach, beforeEach, describe, it } = intern.getInterface('bdd');
 const { assert } = intern.getPlugin('chai');
-import { spy, stub, SinonStub, SinonSpy } from 'sinon';
+import { spy, stub, SinonStub, SinonSpy, match } from 'sinon';
 import { createResolvers } from './../support/util';
 
 import { renderer, widgetInstanceMap } from '../../src/vdom4';
@@ -4229,173 +4229,192 @@ describe('vdom', () => {
 	});
 
 	describe('animations', () => {
-		// describe('updateAnimation', () => {
-		// 	it('is invoked when a node contains only text and that text changes', () => {
-		// 		const updateAnimation = stub();
-		// 		const [ Widget, meta ] = getWidget(v('div', { updateAnimation }, ['text']));
-		// 		const projection = dom.create(widget, { sync: true });
-		// 		meta.setRenderResult(v('div', { updateAnimation }, ['text2']));
-		// 		assert.isTrue(updateAnimation.calledOnce);
-		// 		assert.strictEqual((projection.domNode.childNodes[0] as Element).outerHTML, '<div>text2</div>');
-		// 	});
-		// 	it('is invoked when a node contains text and other nodes and the text changes', () => {
-		// 		const updateAnimation = stub();
-		// 		const [ Widget, meta ] = getWidget(v('div', { updateAnimation }, ['textBefore', v('span'), 'textAfter']));
-		// 		dom.create(widget, { sync: true });
-		// 		meta.setRenderResult(v('div', { updateAnimation }, ['textBefore', v('span'), 'newTextAfter']));
-		// 		assert.isTrue(updateAnimation.calledOnce);
-		// 		updateAnimation.resetHistory();
-		// 		meta.setRenderResult(v('div', { updateAnimation }, ['textBefore', v('span'), 'newTextAfter']));
-		// 		assert.isTrue(updateAnimation.notCalled);
-		// 	});
-		// 	it('is invoked when a property changes', () => {
-		// 		const updateAnimation = stub();
-		// 		const [ Widget, meta ] = getWidget(v('a', { updateAnimation, href: '#1' }));
-		// 		const projection = dom.create(widget, { sync: true });
-		// 		meta.setRenderResult(v('a', { updateAnimation, href: '#2' }));
-		// 		assert.isTrue(
-		// 			updateAnimation.calledWith(
-		// 				projection.domNode.childNodes[0] as Element,
-		// 				match({ href: '#2' }),
-		// 				match({ href: '#1' })
-		// 			)
-		// 		);
-		// 	});
-		// });
-		// describe('enterAnimation', () => {
-		// 	it('is invoked when a new node is added to an existing parent node', () => {
-		// 		const enterAnimation = stub();
-		// 		const [ Widget, meta ] = getWidget(v('div', []));
-		// 		const projection = dom.create(widget, { sync: true });
-		// 		meta.setRenderResult(v('div', [v('span', { enterAnimation })]));
-		// 		assert.isTrue(
-		// 			enterAnimation.calledWith((projection.domNode.childNodes[0] as Element).childNodes[0], match({}))
-		// 		);
-		// 	});
-		// });
-		// describe('exitAnimation', () => {
-		// 	it('is invoked when a node is removed from an existing parent node', () => {
-		// 		const exitAnimation = stub();
-		// 		const [ Widget, meta ] = getWidget(v('div', [v('span', { exitAnimation })]));
-		// 		const projection = dom.create(widget, { sync: true });
-		// 		meta.setRenderResult(v('div', []));
-		// 		assert.isTrue(
-		// 			exitAnimation.calledWithExactly(
-		// 				(projection.domNode.childNodes[0] as Element).childNodes[0],
-		// 				match({}),
-		// 				match({})
-		// 			)
-		// 		);
-		// 		assert.lengthOf((projection.domNode.childNodes[0] as Element).childNodes, 1);
-		// 		exitAnimation.lastCall.callArg(1); // arg1: removeElement
-		// 		assert.lengthOf((projection.domNode.childNodes[0] as Element).childNodes, 0);
-		// 	});
-		// });
-		// describe('transitionStrategy', () => {
-		// 	it('will be invoked when enterAnimation is provided as a string', () => {
-		// 		const transitionStrategy = { enter: stub(), exit: stub() };
-		// 		const [ Widget, meta ] = getWidget(v('div'));
-		// 		const projection = dom.create(widget, { transitions: transitionStrategy, sync: true });
-		// 		meta.setRenderResult(v('div', [v('span', { enterAnimation: 'fadeIn' })]));
-		// 		assert.isTrue(
-		// 			transitionStrategy.enter.calledWithExactly(
-		// 				(projection.domNode.childNodes[0] as Element).firstChild,
-		// 				match({}),
-		// 				'fadeIn'
-		// 			)
-		// 		);
-		// 	});
-		// 	it('will be invoked when exitAnimation is provided as a string', () => {
-		// 		const transitionStrategy = { enter: stub(), exit: stub() };
-		// 		const [ Widget, meta ] = getWidget(v('div', [v('span', { exitAnimation: 'fadeOut' })]));
-		// 		const projection = dom.create(widget, {
-		// 			transitions: transitionStrategy,
-		// 			sync: true
-		// 		});
-		// 		meta.setRenderResult(v('div', []));
-		// 		assert.isTrue(
-		// 			transitionStrategy.exit.calledWithExactly(
-		// 				(projection.domNode.childNodes[0] as Element).firstChild,
-		// 				match({}),
-		// 				'fadeOut',
-		// 				match({})
-		// 			)
-		// 		);
-		// 		transitionStrategy.exit.lastCall.callArg(3);
-		// 		assert.lengthOf((projection.domNode.childNodes[0] as Element).childNodes, 0);
-		// 	});
-		// 	it('Should run enter animations when a widget is added', () => {
-		// 		const transitionStrategy = { enter: stub(), exit: stub() };
-		// 		class Child extends WidgetBase {
-		// 			render() {
-		// 				return v('div', { enterAnimation: 'enter' });
-		// 			}
-		// 		}
-		// 		class Parent extends WidgetBase {
-		// 			items = [w(Child, { key: '1' })];
-		// 			addItem() {
-		// 				this.items = [...this.items, w(Child, { key: '2' })];
-		// 				this.invalidate();
-		// 			}
-		// 			render() {
-		// 				return v('div', [...this.items]);
-		// 			}
-		// 		}
-		// 		const widget = new Parent();
-		// 		const projection = dom.create(widget, {
-		// 			transitions: transitionStrategy,
-		// 			sync: true
-		// 		});
-		// 		assert.isTrue(
-		// 			transitionStrategy.enter.calledWithExactly(
-		// 				(projection.domNode.childNodes[0] as Element).children[0],
-		// 				match({}),
-		// 				'enter'
-		// 			)
-		// 		);
-		// 		widget.addItem();
-		// 		assert.isTrue(
-		// 			transitionStrategy.enter.calledWithExactly(
-		// 				(projection.domNode.childNodes[0] as Element).children[1],
-		// 				match({}),
-		// 				'enter'
-		// 			)
-		// 		);
-		// 	});
-		// 	it('Should run exit animations when a widget is removed', () => {
-		// 		const transitionStrategy = { enter: stub(), exit: stub() };
-		// 		class Child extends WidgetBase {
-		// 			render() {
-		// 				return v('div', { exitAnimation: 'exit' });
-		// 			}
-		// 		}
-		// 		class Parent extends WidgetBase {
-		// 			items = [w(Child, { key: '1' }), w(Child, { key: '2' })];
-		// 			removeItem() {
-		// 				this.items = [this.items[0]];
-		// 				this.invalidate();
-		// 			}
-		// 			render() {
-		// 				return v('div', [...this.items]);
-		// 			}
-		// 		}
-		// 		const widget = new Parent();
-		// 		const projection = dom.create(widget, {
-		// 			transitions: transitionStrategy,
-		// 			sync: true
-		// 		});
-		// 		const node = (projection.domNode.childNodes[0] as Element).children[1];
-		// 		widget.removeItem();
-		// 		assert.isTrue(transitionStrategy.exit.calledWithExactly(node, match({}), 'exit', match({})));
-		// 	});
-		// 	it('will complain about a missing transitionStrategy', () => {
-		// 		const [ Widget, meta ] = getWidget(v('div'));
-		// 		dom.create(widget, { sync: true });
-		// 		assert.throws(() => {
-		// 			meta.setRenderResult(v('div', [v('span', { enterAnimation: 'fadeIn' })]));
-		// 		});
-		// 	});
-		// });
+		describe('updateAnimation', () => {
+			it('is invoked when a node contains only text and that text changes', () => {
+				const updateAnimation = stub();
+				const [Widget, meta] = getWidget(v('div', { updateAnimation }, ['text']));
+				const r = renderer(() => w(Widget, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.append(div);
+				meta.setRenderResult(v('div', { updateAnimation }, ['text2']));
+				assert.isTrue(updateAnimation.calledOnce);
+				assert.strictEqual((div.childNodes[0] as Element).outerHTML, '<div>text2</div>');
+			});
+			it('is invoked when a node contains text and other nodes and the text changes', () => {
+				const updateAnimation = stub();
+				const [Widget, meta] = getWidget(v('div', { updateAnimation }, ['textBefore', v('span'), 'textAfter']));
+				const r = renderer(() => w(Widget, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.append(div);
+				meta.setRenderResult(v('div', { updateAnimation }, ['textBefore', v('span'), 'newTextAfter']));
+				assert.isTrue(updateAnimation.calledOnce);
+				updateAnimation.resetHistory();
+				meta.setRenderResult(v('div', { updateAnimation }, ['textBefore', v('span'), 'newTextAfter']));
+				assert.isTrue(updateAnimation.notCalled);
+			});
+			it('is invoked when a property changes', () => {
+				const updateAnimation = stub();
+				const [Widget, meta] = getWidget(v('a', { updateAnimation, href: '#1' }));
+				const r = renderer(() => w(Widget, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.append(div);
+				meta.setRenderResult(v('a', { updateAnimation, href: '#2' }));
+				assert.isTrue(
+					updateAnimation.calledWith(
+						div.childNodes[0] as Element,
+						match({ href: '#2' }),
+						match({ href: '#1' })
+					)
+				);
+			});
+		});
+		describe('enterAnimation', () => {
+			it('is invoked when a new node is added to an existing parent node', () => {
+				const enterAnimation = stub();
+				const [Widget, meta] = getWidget(v('div', []));
+				const r = renderer(() => w(Widget, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.append(div);
+				meta.setRenderResult(v('div', [v('span', { enterAnimation })]));
+				assert.isTrue(enterAnimation.calledWith((div.childNodes[0] as Element).childNodes[0], match({})));
+			});
+		});
+		describe('exitAnimation', () => {
+			it('is invoked when a node is removed from an existing parent node', () => {
+				const exitAnimation = stub();
+				const [Widget, meta] = getWidget(v('div', [v('span', { exitAnimation })]));
+				const r = renderer(() => w(Widget, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.append(div);
+				meta.setRenderResult(v('div', []));
+				assert.isTrue(
+					exitAnimation.calledWithExactly((div.childNodes[0] as Element).childNodes[0], match({}), match({}))
+				);
+				assert.lengthOf((div.childNodes[0] as Element).childNodes, 1);
+				exitAnimation.lastCall.callArg(1); // arg1: removeElement
+				assert.lengthOf((div.childNodes[0] as Element).childNodes, 0);
+			});
+		});
+		describe('transitionStrategy', () => {
+			it('will be invoked when enterAnimation is provided as a string', () => {
+				const transitionStrategy = { enter: stub(), exit: stub() };
+				const [Widget, meta] = getWidget(v('div'));
+				const r = renderer(() => w(Widget, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.transition = transitionStrategy;
+				r.append(div);
+				meta.setRenderResult(v('div', [v('span', { enterAnimation: 'fadeIn' })]));
+				assert.isTrue(
+					transitionStrategy.enter.calledWithExactly(
+						(div.childNodes[0] as Element).firstChild,
+						match({}),
+						'fadeIn'
+					)
+				);
+			});
+			it('will be invoked when exitAnimation is provided as a string', () => {
+				const transitionStrategy = { enter: stub(), exit: stub() };
+				const [Widget, meta] = getWidget(v('div', [v('span', { exitAnimation: 'fadeOut' })]));
+				const r = renderer(() => w(Widget, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.transition = transitionStrategy;
+				r.append(div);
+				meta.setRenderResult(v('div', []));
+				assert.isTrue(
+					transitionStrategy.exit.calledWithExactly(
+						(div.childNodes[0] as Element).firstChild,
+						match({}),
+						'fadeOut',
+						match({})
+					)
+				);
+				transitionStrategy.exit.lastCall.callArg(3);
+				assert.lengthOf((div.childNodes[0] as Element).childNodes, 0);
+			});
+			it('Should run enter animations when a widget is added', () => {
+				const transitionStrategy = { enter: stub(), exit: stub() };
+				class Child extends WidgetBase {
+					render() {
+						return v('div', { enterAnimation: 'enter' });
+					}
+				}
+				let addItem: any;
+				class Parent extends WidgetBase {
+					items = [w(Child, { key: '1' })];
+					constructor() {
+						super();
+						addItem = this.addItem;
+					}
+
+					addItem = () => {
+						this.items = [...this.items, w(Child, { key: '2' })];
+						this.invalidate();
+					};
+					render() {
+						return v('div', [...this.items]);
+					}
+				}
+				const r = renderer(() => w(Parent, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.transition = transitionStrategy;
+				r.append(div);
+				assert.isTrue(
+					transitionStrategy.enter.calledWithExactly(
+						(div.childNodes[0] as Element).children[0],
+						match({}),
+						'enter'
+					)
+				);
+				addItem();
+				assert.isTrue(
+					transitionStrategy.enter.calledWithExactly(
+						(div.childNodes[0] as Element).children[1],
+						match({}),
+						'enter'
+					)
+				);
+			});
+			it('Should run exit animations when a widget is removed', () => {
+				const transitionStrategy = { enter: stub(), exit: stub() };
+				class Child extends WidgetBase {
+					render() {
+						return v('div', { exitAnimation: 'exit' });
+					}
+				}
+				let removeItem: any;
+				class Parent extends WidgetBase {
+					items = [w(Child, { key: '1' }), w(Child, { key: '2' })];
+					constructor() {
+						super();
+						removeItem = this.removeItem;
+					}
+
+					removeItem = () => {
+						this.items = [this.items[0]];
+						this.invalidate();
+					};
+					render() {
+						return v('div', [...this.items]);
+					}
+				}
+				const r = renderer(() => w(Parent, {}));
+				const div = document.createElement('div');
+				r.sync = true;
+				r.transition = transitionStrategy;
+				r.append(div);
+				const node = (div.childNodes[0] as Element).children[1];
+				removeItem();
+				assert.isTrue(transitionStrategy.exit.calledWithExactly(node, match({}), 'exit', match({})));
+			});
+		});
 	});
 
 	describe('focus', () => {
@@ -4733,5 +4752,4 @@ describe('vdom', () => {
 		setProperties({ rtl: false });
 		assert.strictEqual(root.dir, 'ltr');
 	});
-	// });
 });

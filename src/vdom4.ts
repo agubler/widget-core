@@ -9,8 +9,10 @@ import {
 	SupportedClassName,
 	WidgetBaseConstructor,
 	DefaultWidgetBaseInterface,
-	Constructor
+	Constructor,
+	TransitionStrategy
 } from './interfaces';
+import transitionStrategy from './animations/cssTransitions';
 import { isVNode, isWNode, WNODE, v, isDomVNode } from './d';
 import { Registry, isWidgetBaseConstructor } from './Registry';
 import { WidgetBase } from './WidgetBase';
@@ -35,6 +37,7 @@ export interface BaseNodeWrapper {
 	hasPreviousSiblings?: boolean;
 	hasParentWNode?: boolean;
 	nextWrapper?: DNodeWrapper;
+	namespace?: string;
 }
 
 export interface WNodeWrapper extends BaseNodeWrapper {
@@ -121,6 +124,9 @@ export type DomApplicatorInstruction = CreateDomApplication | DeleteDomApplicati
 export const widgetInstanceMap = new WeakMap<WidgetBase, WidgetData>();
 
 const nodeOperations = ['focus', 'blur', 'scrollIntoView', 'click'];
+const NAMESPACE_W3 = 'http://www.w3.org/';
+const NAMESPACE_SVG = NAMESPACE_W3 + '2000/svg';
+const NAMESPACE_XLINK = NAMESPACE_W3 + '1999/xlink';
 
 function isWNodeWrapper(child: DNodeWrapper): child is WNodeWrapper {
 	return child && isWNode(child.node);
@@ -220,7 +226,8 @@ function renderedToWrapper(
 			node: renderedItem,
 			depth: parent.depth + 1,
 			findInsertBefore,
-			hasParentWNode
+			hasParentWNode,
+			namespace: parent.namespace
 		} as DNodeWrapper;
 		if (previousItem) {
 			traversalMaps.sibling.set(previousItem, wrapper);
@@ -328,13 +335,54 @@ function classes(domNode: any, classes: SupportedClassName, op: string) {
 	}
 }
 
+function updateAttribute(domNode: Element, attrName: string, attrValue: string, namespace?: string) {
+	if (namespace === NAMESPACE_SVG && attrName === 'href') {
+		domNode.setAttributeNS(NAMESPACE_XLINK, attrName, attrValue);
+	} else if ((attrName === 'role' && attrValue === '') || attrValue === undefined) {
+		domNode.removeAttribute(attrName);
+	} else {
+		domNode.setAttribute(attrName, attrValue);
+	}
+}
+
+function runEnterAnimation(next: VNodeWrapper, transitions: TransitionStrategy) {
+	const enterAnimation = next.node.properties.enterAnimation;
+	if (enterAnimation) {
+		if (typeof enterAnimation === 'function') {
+			enterAnimation(next.domNode as Element, next.node.properties);
+		} else {
+			transitions.enter(next.domNode as Element, next.node.properties, enterAnimation);
+		}
+	}
+}
+
+function runExitAnimation(current: VNodeWrapper, transitions: TransitionStrategy) {
+	const removeDomNode = () => {
+		current.domNode && current.domNode.parentNode && current.domNode.parentNode.removeChild(current.domNode);
+		current.domNode = undefined;
+	};
+	if (typeof current.node.properties.exitAnimation === 'function') {
+		current.node.properties.exitAnimation(current.domNode as Element, removeDomNode, current.node.properties);
+		return;
+	} else {
+		transitions.exit(
+			current.domNode as Element,
+			current.node.properties,
+			current.node.properties.exitAnimation as string,
+			removeDomNode
+		);
+		return;
+	}
+}
+
 function setProperties(
 	domNode: HTMLElement,
 	currentProperties: VNodeProperties = {},
-	{ properties: nextProperties, bind }: VNode,
+	nextWrapper: VNodeWrapper,
 	eventMap: WeakMap<Function, EventListener>
-): void {
-	const propNames = Object.keys(nextProperties);
+): boolean {
+	let updated = false;
+	const propNames = Object.keys(nextWrapper.node.properties);
 	const propCount = propNames.length;
 	if (propNames.indexOf('classes') === -1 && currentProperties.classes) {
 		if (Array.isArray(currentProperties.classes)) {
@@ -346,11 +394,11 @@ function setProperties(
 		}
 	}
 
-	removeOrphanedEvents(domNode, currentProperties, nextProperties, eventMap);
+	removeOrphanedEvents(domNode, currentProperties, nextWrapper.node.properties, eventMap);
 
 	for (let i = 0; i < propCount; i++) {
 		const propName = propNames[i];
-		let propValue = nextProperties[propName];
+		let propValue = nextWrapper.node.properties[propName];
 		const previousValue = currentProperties[propName];
 		if (propName === 'classes') {
 			const previousClasses = Array.isArray(previousValue) ? previousValue : [previousValue];
@@ -359,6 +407,7 @@ function setProperties(
 				if (!propValue || propValue.length === 0) {
 					for (let i = 0; i < previousClasses.length; i++) {
 						classes(domNode, previousClasses[i], 'remove');
+						updated = true;
 					}
 				} else {
 					const newClasses: (null | undefined | string)[] = [...currentClasses];
@@ -368,6 +417,7 @@ function setProperties(
 							const classIndex = newClasses.indexOf(previousClassName);
 							if (classIndex === -1) {
 								classes(domNode, previousClassName, 'remove');
+								updated = true;
 							} else {
 								newClasses.splice(classIndex, 1);
 							}
@@ -375,11 +425,13 @@ function setProperties(
 					}
 					for (let i = 0; i < newClasses.length; i++) {
 						classes(domNode, newClasses[i], 'add');
+						updated = true;
 					}
 				}
 			} else {
 				for (let i = 0; i < currentClasses.length; i++) {
 					classes(domNode, currentClasses[i], 'add');
+					updated = true;
 				}
 			}
 		} else if (nodeOperations.indexOf(propName) !== -1) {
@@ -395,6 +447,7 @@ function setProperties(
 					continue;
 				}
 				(domNode.style as any)[styleName] = newStyleValue || '';
+				updated = true;
 			}
 		} else {
 			if (!propValue && typeof previousValue === 'string') {
@@ -414,13 +467,9 @@ function setProperties(
 			} else if (propName !== 'key' && propValue !== previousValue) {
 				const type = typeof propValue;
 				if (type === 'function' && propName.lastIndexOf('on', 0) === 0) {
-					updateEvent(domNode, propName.substr(2), propValue, eventMap, bind, previousValue);
+					updateEvent(domNode, propName.substr(2), propValue, eventMap, nextWrapper.node.bind, previousValue);
 				} else if (type === 'string' && propName !== 'innerHTML') {
-					if ((propName === 'role' && propValue === '') || propValue === undefined) {
-						domNode.removeAttribute(propName);
-					} else {
-						domNode.setAttribute(propName, propValue);
-					}
+					updateAttribute(domNode, propName, propValue, nextWrapper.namespace);
 				} else if (propName === 'scrollLeft' || propName === 'scrollTop') {
 					if ((domNode as any)[propName] !== propValue) {
 						(domNode as any)[propName] = propValue;
@@ -428,15 +477,19 @@ function setProperties(
 				} else {
 					(domNode as any)[propName] = propValue;
 				}
+				updated = true;
 			}
 		}
 	}
+	return updated;
 }
 
 export class Renderer {
 	private _renderer: () => WNode;
 	private _registry: Registry | undefined;
+	private _merge = true;
 	private _sync = false;
+	private _transition: TransitionStrategy = transitionStrategy;
 	private _rootNode: HTMLElement = global.document.body;
 	private _invalidationQueue: InvalidationQueueItem[] = [];
 	private _renderQueue: (RenderQueueItem | DomApplicatorInstruction)[] = [];
@@ -447,7 +500,6 @@ export class Renderer {
 	private _domNodeToWrapperMap = new WeakMap<Node, VNodeWrapper>();
 	private _wrapperSiblingMap = new WeakMap<DNodeWrapper, DNodeWrapper>();
 	private _renderScheduled: number | undefined;
-	private _merge = true;
 
 	constructor(renderer: () => WNode) {
 		this._renderer = renderer;
@@ -459,6 +511,10 @@ export class Renderer {
 
 	public set registry(registry: Registry) {
 		this._registry = registry;
+	}
+
+	public set transition(transition: TransitionStrategy) {
+		this._transition = transition;
 	}
 
 	public append(node?: HTMLElement): void {
@@ -525,7 +581,7 @@ export class Renderer {
 		while (this._domInstructionQueue.length) {
 			const item = this._domInstructionQueue.pop()!;
 			if (item.type === 'create') {
-				setProperties(item.next!.domNode as HTMLElement, undefined, item.next.node, this._eventMap);
+				setProperties(item.next!.domNode as HTMLElement, undefined, item.next, this._eventMap);
 				if (!item.next.merged) {
 					let insertBefore: any;
 					if (item.next.findInsertBefore) {
@@ -533,12 +589,24 @@ export class Renderer {
 					}
 					item.parentDomNode.insertBefore(item.next.domNode!, insertBefore);
 				}
+				const parent = this._dnodeToParentWrapperMap.get(item.next.node);
+				if (parent && isWNodeWrapper(parent) && parent.instance) {
+					const instanceData = widgetInstanceMap.get(parent.instance)!;
+					instanceData.nodeHandler.addRoot();
+					instanceData.onAttach();
+				}
+				runEnterAnimation(item.next, this._transition);
 				const instanceData = widgetInstanceMap.get(item.parentWNodeWrapper!.instance!)!;
 				if (item.next.node.properties.key != null) {
 					instanceData.nodeHandler.add(item.next.domNode as HTMLElement, `${item.next.node.properties.key}`);
 				}
 			} else if (item.type === 'delete') {
-				item.current.domNode!.parentNode!.removeChild(item.current.domNode!);
+				if (item.current.node.properties.exitAnimation) {
+					runExitAnimation(item.current, this._transition);
+				} else {
+					item.current.domNode!.parentNode!.removeChild(item.current.domNode!);
+					item.current.domNode = undefined;
+				}
 			}
 		}
 	}
@@ -721,12 +789,14 @@ export class Renderer {
 					current = this._removeDom({ current }, this._getTraversalMaps());
 					if (current.domNode!.parentNode) {
 						return [
+							{ current: current.childrenWrappers || [], next: [] as any },
 							{
 								type: 'delete',
 								current
 							}
 						];
 					}
+					return [{ current: current.childrenWrappers || [], next: [] as any }];
 				} else if (isWNodeWrapper(current)) {
 					current = current.instance ? this._instanceToWrapperMap.get(current.instance)! : current;
 					this._removeWidget({ current }, this._getTraversalMaps());
@@ -789,7 +859,6 @@ export class Renderer {
 		next.instance!.__setChildren__(next.node.children);
 		next.domNode = current.domNode;
 		next.childrenWrappers = current.childrenWrappers;
-
 		if (instanceData.dirty) {
 			let rendered = next.instance!.__render__();
 			instanceData.rendering = false;
@@ -805,14 +874,25 @@ export class Renderer {
 		sibling.delete(current);
 		parent.delete(current.node);
 		this._instanceToWrapperMap.delete(current.instance!);
+		if (current.instance) {
+			const instanceData = widgetInstanceMap.get(current.instance!)!;
+			instanceData.onDetach();
+		}
 		return current;
 	}
 
 	private _createDom({ next }: CreateDomInstruction, traversalMaps: TraversalMaps): VNodeWrapper {
 		let domNode = next.domNode;
 		if (!domNode) {
+			if (next.node.tag === 'svg') {
+				next.namespace = NAMESPACE_SVG;
+			}
 			if (next.node.tag) {
-				domNode = global.document.createElement(next.node.tag);
+				if (next.namespace) {
+					domNode = global.document.createElementNS(next.namespace, next.node.tag);
+				} else {
+					domNode = global.document.createElement(next.node.tag);
+				}
 			} else if (next.node.text != null) {
 				domNode = global.document.createTextNode(next.node.text);
 			}
@@ -833,6 +913,7 @@ export class Renderer {
 		const parentDomNode = findParentNodes(current.node, traversalMaps).parentDomNode;
 		let domNode = current.domNode!;
 		next.domNode = domNode;
+		next.namespace = current.namespace;
 		if (next.node.text && next.node.text !== current.node.text) {
 			const newDomNode = parentDomNode!.ownerDocument.createTextNode(next.node.text!);
 			parentDomNode!.replaceChild(newDomNode, domNode);
@@ -842,7 +923,16 @@ export class Renderer {
 				const children = renderedToWrapper(next.node.children, next, current, traversalMaps);
 				next.childrenWrappers = children;
 			}
-			setProperties(domNode as HTMLElement, current.node.properties, next.node, this._eventMap);
+			// TODO move to dom instruction
+			const parent = this._dnodeToParentWrapperMap.get(next.node);
+			if (parent && isWNodeWrapper(parent) && parent.instance) {
+				const instanceData = widgetInstanceMap.get(parent.instance)!;
+				instanceData.nodeHandler.addRoot();
+			}
+			const updated = setProperties(domNode as HTMLElement, current.node.properties, next, this._eventMap);
+			if (updated && next.node.properties.updateAnimation) {
+				next.node.properties.updateAnimation(domNode as Element, next.node.properties, current.node.properties);
+			}
 		}
 		return next;
 	}
